@@ -1,124 +1,178 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using BankApi.Models;
-using BankApi.data;
+using BankApi.Dto.Account;
+using BankApi.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BankApi.Controllers;
 
-[Route("api/[controller]")]
+[Authorize]
 [ApiController]
+[Route("api/[controller]")]
 public class AccountsController : ControllerBase
 {
-    private readonly BankContext _context;
-    public AccountsController(BankContext context)
+    private readonly IAccountService _accountService;
+    private readonly ICurrentUserService _currentUser;
+
+    public AccountsController(
+        IAccountService accountService,
+        ICurrentUserService currentUser)
     {
-        _context = context;
+        _accountService = accountService;
+        _currentUser = currentUser;
     }
+
+
+    // =====================================================
+    // GET MY ACCOUNTS
+    // =====================================================
+
     [HttpGet]
-    public async Task<IActionResult> GetAccounts()
+    public async Task<IActionResult> GetMyAccounts()
     {
-        var accounts = await _context.Accounts.ToListAsync();
+        var customerId =
+            await _currentUser.GetCustomerIdAsync();
+
+        if (customerId == null)
+            return Unauthorized("Customer not found.");
+
+        var accounts =
+            await _accountService.GetMyAccountsAsync(
+                customerId.Value);
+
         return Ok(accounts);
     }
-    [Authorize(Roles = "Admin")]
+
+
+    // =====================================================
+    // GET MY ACCOUNT
+    // =====================================================
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetAccount(int id)
     {
-        var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == id);
+        var customerId =
+            await _currentUser.GetCustomerIdAsync();
+
+        if (customerId == null)
+            return Unauthorized("Customer not found.");
+
+        var account =
+            await _accountService.GetAccountAsync(
+                id,
+                customerId.Value);
+
         if (account == null)
-        {
-            return NotFound("Account not found");
-        }
+            return NotFound("Account not found.");
+
         return Ok(account);
     }
+
+
+    // =====================================================
+    // CREATE ACCOUNT
+    // =====================================================
+
     [HttpPost]
-    public async Task<IActionResult> CreateAccount(Account account)
+    public async Task<IActionResult> CreateAccount(
+        [FromBody] CreateAccountRequest request)
     {
-        var customer = await  _context.Customers.FirstOrDefaultAsync(c => c.Id == account.CustomerId);
-        if(customer == null)
+        var customerId =
+            await _currentUser.GetCustomerIdAsync();
+
+        if (customerId == null)
+            return Unauthorized("Customer not found.");
+
+        try
         {
-            return NotFound("Customer not found");
+            var account =
+                await _accountService.CreateAccountAsync(
+                    customerId.Value,
+                    request.AccountType);
+
+            return Ok(new
+            {
+                message = "Account created successfully",
+                account
+            });
         }
-        var lastAccount = await _context.Accounts.OrderByDescending(a => a.Id).FirstOrDefaultAsync();
-        long nextAccountNumber;
-        if (lastAccount == null)
+        catch (InvalidOperationException ex)
         {
-            nextAccountNumber = 100000001;
+            return BadRequest(ex.Message);
         }
-        else
-        {
-            nextAccountNumber = long.Parse(lastAccount.AccountNumber) + 1;
-        }
-        account.AccountNumber = nextAccountNumber.ToString();
-        account.Balance = 0;
-        account.CreatedAt = DateTime.UtcNow;
-        _context.Accounts.Add(account);
-        await _context.SaveChangesAsync();
-        return Ok(new
-        {
-            message = "Account created successfully",
-            account = account
-        });
     }
-    [HttpGet("Customer/{customerId}")]
-    public async Task<IActionResult> GetAccountsByCustomer(int customerId)
-    {
-        var accounts = await _context.Accounts.Where(a => a.CustomerId == customerId).ToListAsync();
-        return Ok(accounts);
-    }
+
+
+    // =====================================================
+    // UPDATE ACCOUNT TYPE
+    // =====================================================
+
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateAccountType(int id, string accountType)
+    public async Task<IActionResult> UpdateAccountType(
+        int id,
+        [FromBody] UpdateAccountTypeRequest request)
     {
-        var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == id);
-        if(account == null)
+        var customerId =
+            await _currentUser.GetCustomerIdAsync();
+
+        if (customerId == null)
+            return Unauthorized("Customer not found.");
+
+        try
         {
-            return NotFound("Account not found");
+            var account =
+                await _accountService.UpdateAccountTypeAsync(
+                    id,
+                    customerId.Value,
+                    request.AccountType);
+
+            if (account == null)
+                return NotFound("Account not found.");
+
+            return Ok(new
+            {
+                message = "Account type updated successfully",
+                account
+            });
         }
-        if(accountType != "Savings" && accountType != "Current"){
-            return BadRequest("Account type must be Savings or Current");
-        }
-        if(string.IsNullOrWhiteSpace(accountType)){
-            return BadRequest("Account type is required");
-        }
-        if(accountType.Length > 10){
-            return BadRequest("Account type must be less than 10 characters");
-        }
-        if(account.AccountType == accountType)
+        catch (InvalidOperationException ex)
         {
-            return BadRequest("Account type already exists");
+            return BadRequest(ex.Message);
         }
-        else
-        {
-            account.AccountType = accountType;
-        }
-        await _context.SaveChangesAsync();
-        return Ok(new
-        {
-            message = "Account type updated successfully",
-            account = account
-        });
     }
+
+
+    // =====================================================
+    // CLOSE ACCOUNT
+    // =====================================================
+
     [HttpPut("{id}/close")]
     public async Task<IActionResult> CloseAccount(int id)
     {
-        var account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == id);
-        if(account == null)
+        var customerId =
+            await _currentUser.GetCustomerIdAsync();
+
+        if (customerId == null)
+            return Unauthorized("Customer not found.");
+
+        try
         {
-            return NotFound("Account not found");
+            var account =
+                await _accountService.CloseAccountAsync(
+                    id,
+                    customerId.Value);
+
+            if (account == null)
+                return NotFound("Account not found.");
+
+            return Ok(new
+            {
+                message = "Account closed successfully",
+                account
+            });
         }
-        if(account.Status == "Closed"){
-            return BadRequest("Account already closed");
-        }
-        if(account.Balance > 0){
-            return BadRequest("Account has balance it should be zero");
-        }
-        account.Status = "Closed";
-        await _context.SaveChangesAsync();
-        return Ok(new
+        catch (InvalidOperationException ex)
         {
-            message = "Account closed successfully",
-            account = account
-        });
+            return BadRequest(ex.Message);
+        }
     }
 }

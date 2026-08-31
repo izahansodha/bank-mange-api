@@ -1,10 +1,11 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using BankApi.Dto.Transaction.Migrations;
 
 #nullable disable
 
-namespace BankApi.Migrations
+namespace BankApi.Dto.Transaction.Migrations
 {
     /// <inheritdoc />
     public partial class AddAccountsAndTransactions : Migration

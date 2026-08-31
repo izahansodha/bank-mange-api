@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using BankApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace BankApi.data
 {
@@ -14,8 +14,13 @@ namespace BankApi.data
     {
         modelBuilder.Entity<Account>().Property(a => a.Version).IsConcurrencyToken();
         modelBuilder.Entity<Account>().HasIndex(a => a.AccountNumber).IsUnique();
-        modelBuilder.Entity<Transaction>().HasIndex(t => new{ t.AccountId, t.CreatedAt });
-    }
+        modelBuilder.Entity<Transaction>().HasIndex(t => new { t.AccountId, t.CreatedAt });
+        modelBuilder.Entity<Customer>()
+    .HasOne(c => c.User)
+    .WithMany()
+    .HasForeignKey(c => c.UserId)
+    .OnDelete(DeleteBehavior.Cascade);
+        }
     }
    
 }

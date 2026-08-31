@@ -1,917 +1,880 @@
 import { useEffect, useState } from "react";
+import {
+  Users,
+  UserCheck,
+  ShieldCheck,
+  CreditCard,
+  ReceiptText,
+  RefreshCw,
+  ArrowRight,
+  ShieldAlert,
+} from "lucide-react";
+
+import Layout from "../Components/Layout";
+import { getAdminSummary } from "../api/adminApi";
+import { useAuth } from "../Context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 function AdminDashboard() {
-  const user = JSON.parse(
-    localStorage.getItem("user") || "{}"
-  );
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  const [stats, setStats] = useState({
-    users: 0,
-    accounts: 0,
-    transactions: 0,
-    transfers: 0,
-  });
-
-  const [recentTransactions, setRecentTransactions] =
-    useState([]);
-
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
+  // =====================================================
+  // LOAD ADMIN SUMMARY
+  // =====================================================
 
-  const loadDashboard = async () => {
+  const loadSummary = async () => {
     try {
-      const token = localStorage.getItem("token");
+      setLoading(true);
+      setError("");
 
-      /*
-        Later connect this to:
+      const data = await getAdminSummary();
 
-        GET /api/admin/dashboard
-
-        headers:
-        Authorization: Bearer TOKEN
-      */
-
-      // Demo data
-      setTimeout(() => {
-        setStats({
-          users: 1248,
-          accounts: 1875,
-          transactions: 9634,
-          transfers: 4218,
-        });
-
-        setRecentTransactions([
-          {
-            id: "TXN001",
-            user: "John Doe",
-            type: "Transfer",
-            amount: 2500,
-            status: "Completed",
-            date: "24 Aug 2026",
-          },
-          {
-            id: "TXN002",
-            user: "Sarah Smith",
-            type: "Deposit",
-            amount: 5000,
-            status: "Completed",
-            date: "24 Aug 2026",
-          },
-          {
-            id: "TXN003",
-            user: "Mike Johnson",
-            type: "Transfer",
-            amount: 1200,
-            status: "Pending",
-            date: "23 Aug 2026",
-          },
-          {
-            id: "TXN004",
-            user: "David Brown",
-            type: "Withdrawal",
-            amount: 800,
-            status: "Failed",
-            date: "23 Aug 2026",
-          },
-        ]);
-
-        setLoading(false);
-      }, 600);
+      setSummary(data);
     } catch (error) {
       console.error(error);
+
+      if (error.response?.status === 401) {
+        navigate("/login");
+        return;
+      }
+
+      if (error.response?.status === 403) {
+        setError(
+          "You do not have permission to access the admin dashboard."
+        );
+        return;
+      }
+
+      setError(
+        error.response?.data?.message ||
+          error.response?.data ||
+          "Unable to load admin dashboard."
+      );
+    } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  // =====================================================
+  // CHECK ADMIN + LOAD
+  // =====================================================
 
-    window.location.href = "/";
-  };
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
 
-  return (
-    <div style={styles.page}>
+    if (user.role !== "Admin") {
+      navigate("/dashboard");
+      return;
+    }
 
-      {/* ================= SIDEBAR ================= */}
+    loadSummary();
+  }, [user]);
 
-      <aside style={styles.sidebar}>
+  // =====================================================
+  // LOADING
+  // =====================================================
 
-        <div>
+  if (loading) {
+    return (
+      <Layout>
+        <div style={styles.loading}>
+          <div style={styles.spinner}></div>
 
-          <h2 style={styles.logo}>
-            🏦 BankApp
-          </h2>
+          <p>
+            Loading admin dashboard...
+          </p>
+        </div>
+      </Layout>
+    );
+  }
 
-          <div style={styles.adminBadge}>
-            🛡️ ADMIN PANEL
+  // =====================================================
+  // ERROR
+  // =====================================================
+
+  if (error) {
+    return (
+      <Layout>
+        <div style={styles.errorPage}>
+
+          <div style={styles.errorIcon}>
+            <ShieldAlert size={28} />
           </div>
 
-          <nav style={styles.nav}>
+          <h2>
+            Unable to load dashboard
+          </h2>
 
-            <a
-              href="/admin"
-              style={{
-                ...styles.navItem,
-                ...styles.activeNav,
-              }}
-            >
-              📊 Dashboard
-            </a>
+          <p>
+            {error}
+          </p>
 
-            <a
-              href="/admin/users"
-              style={styles.navItem}
-            >
-              👥 Users
-            </a>
+          <button
+            style={styles.primaryButton}
+            onClick={loadSummary}
+          >
+            <RefreshCw size={16} />
+            Try Again
+          </button>
 
-            <a
-              href="/admin/accounts"
-              style={styles.navItem}
-            >
-              💳 Accounts
-            </a>
+        </div>
+      </Layout>
+    );
+  }
 
-            <a
-              href="/admin/transactions"
-              style={styles.navItem}
-            >
-              💸 Transactions
-            </a>
+  return (
+    <Layout>
 
-            <a
-              href="/admin/transfers"
-              style={styles.navItem}
-            >
-              🔄 Transfers
-            </a>
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
-            <a
-              href="/admin/reports"
-              style={styles.navItem}
-            >
-              📈 Reports
-            </a>
+      <div style={styles.pageHeader}>
 
-            <a
-              href="/admin/security"
-              style={styles.navItem}
-            >
-              🔐 Security
-            </a>
+        <div>
+          <p style={styles.eyebrow}>
+            ADMINISTRATION
+          </p>
 
-          </nav>
+          <h1 style={styles.title}>
+            Admin Dashboard
+          </h1>
 
+          <p style={styles.subtitle}>
+            Monitor your banking system from one
+            place.
+          </p>
         </div>
 
         <button
-          onClick={logout}
-          style={styles.logout}
+          style={styles.refreshButton}
+          onClick={loadSummary}
         >
-          🚪 Logout
+          <RefreshCw size={16} />
+          Refresh
         </button>
 
-      </aside>
+      </div>
 
+      {/* =================================================
+          WELCOME CARD
+      ================================================= */}
 
-      {/* ================= MAIN ================= */}
+      <div style={styles.welcomeCard}>
 
-      <main style={styles.main}>
+        <div>
 
-        {/* Header */}
+          <span style={styles.welcomeLabel}>
+            Welcome back
+          </span>
 
-        <header style={styles.header}>
+          <h2 style={styles.welcomeTitle}>
+            {user?.fullName || "Administrator"}
+          </h2>
+
+          <p style={styles.welcomeText}>
+            You are signed in as an administrator.
+            Here is the current overview of the
+            banking system.
+          </p>
+
+        </div>
+
+        <div style={styles.adminIcon}>
+          <ShieldCheck size={35} />
+        </div>
+
+      </div>
+
+      {/* =================================================
+          STATISTICS
+      ================================================= */}
+
+      <section style={styles.section}>
+
+        <div style={styles.sectionHeader}>
 
           <div>
-
-            <h1 style={styles.title}>
-              Admin Dashboard
-            </h1>
-
-            <p style={styles.subtitle}>
-              Monitor and manage the banking system
-            </p>
-
-          </div>
-
-          <div style={styles.adminProfile}>
-
-            <div style={styles.avatar}>
-              {user.fullName
-                ? user.fullName
-                    .charAt(0)
-                    .toUpperCase()
-                : "A"}
-            </div>
-
-            <div>
-              <strong>
-                {user.fullName || "Administrator"}
-              </strong>
-
-              <small style={styles.role}>
-                Administrator
-              </small>
-            </div>
-
-          </div>
-
-        </header>
-
-
-        {/* ================= STAT CARDS ================= */}
-
-        <section style={styles.statsGrid}>
-
-          <StatCard
-            icon="👥"
-            title="Total Users"
-            value={stats.users}
-            description="+12% this month"
-          />
-
-          <StatCard
-            icon="💳"
-            title="Total Accounts"
-            value={stats.accounts}
-            description="+8% this month"
-          />
-
-          <StatCard
-            icon="💸"
-            title="Transactions"
-            value={stats.transactions}
-            description="+18% this month"
-          />
-
-          <StatCard
-            icon="🔄"
-            title="Transfers"
-            value={stats.transfers}
-            description="+14% this month"
-          />
-
-        </section>
-
-
-        {/* ================= CONTENT ================= */}
-
-        <section style={styles.contentGrid}>
-
-          {/* Recent Transactions */}
-
-          <div style={styles.card}>
-
-            <div style={styles.cardHeader}>
-
-              <div>
-
-                <h2 style={styles.cardTitle}>
-                  Recent Transactions
-                </h2>
-
-                <p style={styles.cardSubtitle}>
-                  Latest banking activity
-                </p>
-
-              </div>
-
-              <a
-                href="/admin/transactions"
-                style={styles.viewAll}
-              >
-                View All →
-              </a>
-
-            </div>
-
-
-            {loading ? (
-
-              <div style={styles.loading}>
-                Loading transactions...
-              </div>
-
-            ) : (
-
-              <div style={styles.tableWrapper}>
-
-                <table style={styles.table}>
-
-                  <thead>
-
-                    <tr>
-
-                      <th>ID</th>
-                      <th>User</th>
-                      <th>Type</th>
-                      <th>Amount</th>
-                      <th>Status</th>
-                      <th>Date</th>
-
-                    </tr>
-
-                  </thead>
-
-                  <tbody>
-
-                    {recentTransactions.map(
-                      (transaction) => (
-
-                        <tr key={transaction.id}>
-
-                          <td>
-                            <strong>
-                              {transaction.id}
-                            </strong>
-                          </td>
-
-                          <td>
-                            {transaction.user}
-                          </td>
-
-                          <td>
-                            {transaction.type}
-                          </td>
-
-                          <td>
-                            ₹
-                            {transaction.amount.toLocaleString()}
-                          </td>
-
-                          <td>
-
-                            <StatusBadge
-                              status={
-                                transaction.status
-                              }
-                            />
-
-                          </td>
-
-                          <td>
-                            {transaction.date}
-                          </td>
-
-                        </tr>
-
-                      )
-                    )}
-
-                  </tbody>
-
-                </table>
-
-              </div>
-
-            )}
-
-          </div>
-
-
-          {/* System Overview */}
-
-          <div style={styles.card}>
-
-            <h2 style={styles.cardTitle}>
+            <h2 style={styles.sectionTitle}>
               System Overview
             </h2>
 
-            <p style={styles.cardSubtitle}>
-              Current platform status
+            <p style={styles.sectionSubtitle}>
+              Current statistics from the database
             </p>
+          </div>
 
+        </div>
 
-            <div style={styles.systemList}>
+        <div style={styles.statsGrid}>
 
-              <SystemStatus
-                name="API Server"
-                status="Operational"
-              />
+          {/* USERS */}
 
-              <SystemStatus
-                name="Database"
-                status="Operational"
-              />
+          <div style={styles.statCard}>
 
-              <SystemStatus
-                name="Authentication"
-                status="Operational"
-              />
+            <div
+              style={{
+                ...styles.statIcon,
+                backgroundColor: "#eff6ff",
+                color: "#2563eb",
+              }}
+            >
+              <Users size={21} />
+            </div>
 
-              <SystemStatus
-                name="Payment System"
-                status="Operational"
-              />
+            <div style={styles.statContent}>
+
+              <span style={styles.statLabel}>
+                Total Users
+              </span>
+
+              <strong style={styles.statValue}>
+                {summary?.totalUsers || 0}
+              </strong>
+
+              <span style={styles.statDescription}>
+                Registered users
+              </span>
 
             </div>
 
           </div>
 
-        </section>
+          {/* CUSTOMERS */}
 
+          <div style={styles.statCard}>
 
-        {/* ================= QUICK ACTIONS ================= */}
+            <div
+              style={{
+                ...styles.statIcon,
+                backgroundColor: "#f0fdf4",
+                color: "#16a34a",
+              }}
+            >
+              <UserCheck size={21} />
+            </div>
 
-        <section style={styles.card}>
+            <div style={styles.statContent}>
 
-          <h2 style={styles.cardTitle}>
-            Quick Actions
-          </h2>
+              <span style={styles.statLabel}>
+                Customers
+              </span>
 
-          <p style={styles.cardSubtitle}>
-            Frequently used administration tools
-          </p>
+              <strong style={styles.statValue}>
+                {summary?.totalCustomers || 0}
+              </strong>
 
+              <span style={styles.statDescription}>
+                Customer accounts
+              </span>
 
-          <div style={styles.actions}>
-
-            <ActionButton
-              icon="👥"
-              text="Manage Users"
-              link="/admin/users"
-            />
-
-            <ActionButton
-              icon="💳"
-              text="Manage Accounts"
-              link="/admin/accounts"
-            />
-
-            <ActionButton
-              icon="💸"
-              text="Transactions"
-              link="/admin/transactions"
-            />
-
-            <ActionButton
-              icon="📈"
-              text="View Reports"
-              link="/admin/reports"
-            />
-
-            <ActionButton
-              icon="🔐"
-              text="Security"
-              link="/admin/security"
-            />
+            </div>
 
           </div>
 
-        </section>
+          {/* ADMINS */}
 
+          <div style={styles.statCard}>
 
-        {/* ================= SECURITY NOTICE ================= */}
+            <div
+              style={{
+                ...styles.statIcon,
+                backgroundColor: "#fffbeb",
+                color: "#d97706",
+              }}
+            >
+              <ShieldCheck size={21} />
+            </div>
 
-        <div style={styles.securityNotice}>
+            <div style={styles.statContent}>
 
-          <span style={styles.securityIcon}>
-            🔐
-          </span>
+              <span style={styles.statLabel}>
+                Administrators
+              </span>
+
+              <strong style={styles.statValue}>
+                {summary?.totalAdmins || 0}
+              </strong>
+
+              <span style={styles.statDescription}>
+                System administrators
+              </span>
+
+            </div>
+
+          </div>
+
+          {/* ACCOUNTS */}
+
+          <div style={styles.statCard}>
+
+            <div
+              style={{
+                ...styles.statIcon,
+                backgroundColor: "#f5f3ff",
+                color: "#7c3aed",
+              }}
+            >
+              <CreditCard size={21} />
+            </div>
+
+            <div style={styles.statContent}>
+
+              <span style={styles.statLabel}>
+                Bank Accounts
+              </span>
+
+              <strong style={styles.statValue}>
+                {summary?.totalAccounts || 0}
+              </strong>
+
+              <span style={styles.statDescription}>
+                Created accounts
+              </span>
+
+            </div>
+
+          </div>
+
+          {/* TRANSACTIONS */}
+
+          <div style={styles.statCard}>
+
+            <div
+              style={{
+                ...styles.statIcon,
+                backgroundColor: "#fff7ed",
+                color: "#ea580c",
+              }}
+            >
+              <ReceiptText size={21} />
+            </div>
+
+            <div style={styles.statContent}>
+
+              <span style={styles.statLabel}>
+                Transactions
+              </span>
+
+              <strong style={styles.statValue}>
+                {summary?.totalTransactions || 0}
+              </strong>
+
+              <span style={styles.statDescription}>
+                Recorded transactions
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* =================================================
+          ADMIN QUICK ACTIONS
+      ================================================= */}
+
+      <section style={styles.section}>
+
+        <div style={styles.sectionHeader}>
 
           <div>
+            <h2 style={styles.sectionTitle}>
+              Administration
+            </h2>
 
-            <strong>
-              Admin Security
-            </strong>
-
-            <p>
-              Admin actions are protected by JWT
-              authentication and role-based
-              authorization.
+            <p style={styles.sectionSubtitle}>
+              Quickly access management tools
             </p>
-
           </div>
 
         </div>
 
-      </main>
+        <div style={styles.actionsGrid}>
 
-    </div>
-  );
-}
+          {/* USERS */}
 
+          <button
+            style={styles.actionCard}
+            onClick={() =>
+              navigate("/admin/users")
+            }
+          >
 
-/* ================= STAT CARD ================= */
+            <div
+              style={{
+                ...styles.actionIcon,
+                backgroundColor: "#eff6ff",
+                color: "#2563eb",
+              }}
+            >
+              <Users size={21} />
+            </div>
 
-function StatCard({
-  icon,
-  title,
-  value,
-  description,
-}) {
-  return (
-    <div style={styles.statCard}>
+            <div style={styles.actionContent}>
 
-      <div style={styles.statTop}>
+              <strong>
+                Manage Users
+              </strong>
 
-        <div style={styles.statIcon}>
-          {icon}
+              <span>
+                View registered customers and
+                administrators.
+              </span>
+
+            </div>
+
+            <ArrowRight
+              size={18}
+              color="#94a3b8"
+            />
+
+          </button>
+
+          {/* ACCOUNTS */}
+
+          <button
+            style={styles.actionCard}
+            onClick={() =>
+              navigate("/admin/accounts")
+            }
+          >
+
+            <div
+              style={{
+                ...styles.actionIcon,
+                backgroundColor: "#f5f3ff",
+                color: "#7c3aed",
+              }}
+            >
+              <CreditCard size={21} />
+            </div>
+
+            <div style={styles.actionContent}>
+
+              <strong>
+                Manage Accounts
+              </strong>
+
+              <span>
+                Review and manage bank accounts.
+              </span>
+
+            </div>
+
+            <ArrowRight
+              size={18}
+              color="#94a3b8"
+            />
+
+          </button>
+
+          {/* TRANSACTIONS */}
+
+          <button
+            style={styles.actionCard}
+            onClick={() =>
+              navigate(
+                "/admin/transactions"
+              )
+            }
+          >
+
+            <div
+              style={{
+                ...styles.actionIcon,
+                backgroundColor: "#fff7ed",
+                color: "#ea580c",
+              }}
+            >
+              <ReceiptText size={21} />
+            </div>
+
+            <div style={styles.actionContent}>
+
+              <strong>
+                Transactions
+              </strong>
+
+              <span>
+                Review system-wide transaction
+                activity.
+              </span>
+
+            </div>
+
+            <ArrowRight
+              size={18}
+              color="#94a3b8"
+            />
+
+          </button>
+
         </div>
 
-        <span style={styles.more}>
-          ⋮
-        </span>
+      </section>
+
+      {/* =================================================
+          ADMIN INFORMATION
+      ================================================= */}
+
+      <div style={styles.infoCard}>
+
+        <div>
+
+          <span style={styles.infoLabel}>
+            Administrator
+          </span>
+
+          <strong>
+            {user?.fullName ||
+              "Administrator"}
+          </strong>
+
+        </div>
+
+        <div>
+
+          <span style={styles.infoLabel}>
+            Email
+          </span>
+
+          <strong>
+            {user?.email ||
+              "Not available"}
+          </strong>
+
+        </div>
+
+        <div>
+
+          <span style={styles.infoLabel}>
+            Role
+          </span>
+
+          <span style={styles.adminBadge}>
+            <ShieldCheck size={13} />
+            Admin
+          </span>
+
+        </div>
+
+        <div>
+
+          <span style={styles.infoLabel}>
+            System Status
+          </span>
+
+          <span style={styles.onlineBadge}>
+            ● Operational
+          </span>
+
+        </div>
 
       </div>
 
-      <h3 style={styles.statTitle}>
-        {title}
-      </h3>
-
-      <div style={styles.statValue}>
-        {value.toLocaleString()}
-      </div>
-
-      <p style={styles.statDescription}>
-        <span style={styles.green}>
-          ↑
-        </span>{" "}
-        {description}
-      </p>
-
-    </div>
+    </Layout>
   );
 }
-
-
-/* ================= STATUS ================= */
-
-function StatusBadge({ status }) {
-
-  let style = styles.completed;
-
-  if (status === "Pending") {
-    style = styles.pending;
-  }
-
-  if (status === "Failed") {
-    style = styles.failed;
-  }
-
-  return (
-    <span style={style}>
-      {status}
-    </span>
-  );
-}
-
-
-/* ================= SYSTEM STATUS ================= */
-
-function SystemStatus({
-  name,
-  status,
-}) {
-  return (
-    <div style={styles.systemItem}>
-
-      <span>
-        {name}
-      </span>
-
-      <span style={styles.operational}>
-        ● {status}
-      </span>
-
-    </div>
-  );
-}
-
-
-/* ================= ACTION ================= */
-
-function ActionButton({
-  icon,
-  text,
-  link,
-}) {
-  return (
-    <a
-      href={link}
-      style={styles.action}
-    >
-
-      <span style={styles.actionIcon}>
-        {icon}
-      </span>
-
-      <span>
-        {text}
-      </span>
-
-      <span>
-        →
-      </span>
-
-    </a>
-  );
-}
-
-
-/* ================= STYLES ================= */
 
 const styles = {
-
-  page: {
-    minHeight: "100vh",
+  pageHeader: {
     display: "flex",
-    backgroundColor: "#f5f7fb",
-    fontFamily: "Arial, sans-serif",
-  },
-
-  sidebar: {
-    width: "240px",
-    backgroundColor: "#111827",
-    color: "white",
-    padding: "25px 15px",
-    display: "flex",
-    flexDirection: "column",
     justifyContent: "space-between",
-    flexShrink: 0,
-  },
-
-  logo: {
-    textAlign: "center",
+    alignItems: "flex-end",
+    gap: "20px",
     marginBottom: "25px",
   },
 
-  adminBadge: {
-    backgroundColor: "#7f1d1d",
-    color: "#fecaca",
-    padding: "8px",
-    borderRadius: "6px",
-    textAlign: "center",
+  eyebrow: {
+    margin: "0 0 7px",
+    color: "#2563eb",
     fontSize: "11px",
-    fontWeight: "bold",
-    marginBottom: "25px",
-  },
-
-  nav: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "6px",
-  },
-
-  navItem: {
-    color: "#d1d5db",
-    textDecoration: "none",
-    padding: "13px",
-    borderRadius: "8px",
-    display: "block",
-  },
-
-  activeNav: {
-    backgroundColor: "#2563eb",
-    color: "white",
-  },
-
-  logout: {
-    border: "none",
-    padding: "12px",
-    borderRadius: "8px",
-    backgroundColor: "#dc2626",
-    color: "white",
-    cursor: "pointer",
-  },
-
-  main: {
-    flex: 1,
-    padding: "30px",
-    overflow: "auto",
-  },
-
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "30px",
+    fontWeight: "700",
+    letterSpacing: "0.1em",
   },
 
   title: {
     margin: 0,
-    fontSize: "30px",
+    color: "#0f172a",
+    fontSize: "28px",
+    fontWeight: "700",
   },
 
   subtitle: {
-    color: "#6b7280",
+    margin: "7px 0 0",
+    color: "#64748b",
+    fontSize: "14px",
   },
 
-  adminProfile: {
+  refreshButton: {
     display: "flex",
     alignItems: "center",
-    gap: "12px",
+    gap: "7px",
+    padding: "10px 15px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    backgroundColor: "#ffffff",
+    color: "#475569",
+    cursor: "pointer",
+    fontSize: "12px",
+    fontWeight: "600",
   },
 
-  avatar: {
-    width: "45px",
-    height: "45px",
-    borderRadius: "50%",
-    backgroundColor: "#2563eb",
-    color: "white",
+  welcomeCard: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "25px",
+    padding: "25px",
+    borderRadius: "13px",
+    backgroundColor: "#1d4ed8",
+    color: "#ffffff",
+    marginBottom: "35px",
+  },
+
+  welcomeLabel: {
+    fontSize: "11px",
+    opacity: 0.75,
+  },
+
+  welcomeTitle: {
+    margin: "5px 0 7px",
+    fontSize: "22px",
+  },
+
+  welcomeText: {
+    margin: 0,
+    maxWidth: "600px",
+    fontSize: "12px",
+    lineHeight: "1.6",
+    opacity: 0.85,
+  },
+
+  adminIcon: {
+    width: "70px",
+    height: "70px",
+    flexShrink: 0,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontWeight: "bold",
-    fontSize: "20px",
+    borderRadius: "16px",
+    backgroundColor:
+      "rgba(255,255,255,0.12)",
   },
 
-  role: {
-    display: "block",
-    color: "#6b7280",
+  section: {
+    marginTop: "30px",
+  },
+
+  sectionHeader: {
+    marginBottom: "15px",
+  },
+
+  sectionTitle: {
+    margin: 0,
+    color: "#0f172a",
+    fontSize: "18px",
+  },
+
+  sectionSubtitle: {
+    margin: "5px 0 0",
+    color: "#94a3b8",
     fontSize: "12px",
-    marginTop: "3px",
   },
 
   statsGrid: {
     display: "grid",
     gridTemplateColumns:
-      "repeat(4, 1fr)",
-    gap: "20px",
-    marginBottom: "25px",
+      "repeat(auto-fit, minmax(210px, 1fr))",
+    gap: "15px",
   },
 
   statCard: {
-    backgroundColor: "white",
-    padding: "22px",
-    borderRadius: "14px",
-    boxShadow:
-      "0 3px 12px rgba(0,0,0,0.05)",
-  },
-
-  statTop: {
     display: "flex",
-    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "13px",
+    padding: "19px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "11px",
   },
 
   statIcon: {
-    fontSize: "25px",
+    width: "43px",
+    height: "43px",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "10px",
   },
 
-  more: {
-    color: "#9ca3af",
-    fontSize: "20px",
+  statContent: {
+    minWidth: 0,
   },
 
-  statTitle: {
-    color: "#6b7280",
-    fontSize: "14px",
-    marginBottom: "5px",
+  statLabel: {
+    display: "block",
+    color: "#64748b",
+    fontSize: "11px",
+    marginBottom: "4px",
   },
 
   statValue: {
-    fontSize: "28px",
-    fontWeight: "bold",
+    display: "block",
+    color: "#0f172a",
+    fontSize: "21px",
   },
 
   statDescription: {
-    fontSize: "12px",
-    color: "#6b7280",
+    display: "block",
+    marginTop: "3px",
+    color: "#94a3b8",
+    fontSize: "10px",
   },
 
-  green: {
-    color: "#16a34a",
-    fontWeight: "bold",
-  },
-
-  contentGrid: {
+  actionsGrid: {
     display: "grid",
     gridTemplateColumns:
-      "minmax(500px, 2fr) minmax(280px, 1fr)",
-    gap: "25px",
-    marginBottom: "25px",
+      "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "14px",
   },
 
-  card: {
-    backgroundColor: "white",
-    padding: "25px",
-    borderRadius: "14px",
-    boxShadow:
-      "0 3px 12px rgba(0,0,0,0.05)",
-    marginBottom: "25px",
-  },
-
-  cardHeader: {
+  actionCard: {
     display: "flex",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "20px",
-  },
-
-  cardTitle: {
-    margin: 0,
-  },
-
-  cardSubtitle: {
-    color: "#6b7280",
-    fontSize: "13px",
-  },
-
-  viewAll: {
-    color: "#2563eb",
-    textDecoration: "none",
-    fontSize: "13px",
-  },
-
-  tableWrapper: {
-    overflowX: "auto",
-  },
-
-  table: {
+    gap: "13px",
     width: "100%",
-    borderCollapse: "collapse",
-    fontSize: "13px",
-  },
-
-  loading: {
-    padding: "40px",
-    textAlign: "center",
-    color: "#6b7280",
-  },
-
-  completed: {
-    backgroundColor: "#dcfce7",
-    color: "#15803d",
-    padding: "5px 9px",
-    borderRadius: "20px",
-    fontSize: "11px",
-  },
-
-  pending: {
-    backgroundColor: "#fef3c7",
-    color: "#b45309",
-    padding: "5px 9px",
-    borderRadius: "20px",
-    fontSize: "11px",
-  },
-
-  failed: {
-    backgroundColor: "#fee2e2",
-    color: "#dc2626",
-    padding: "5px 9px",
-    borderRadius: "20px",
-    fontSize: "11px",
-  },
-
-  systemList: {
-    marginTop: "25px",
-  },
-
-  systemItem: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: "15px 0",
-    borderBottom: "1px solid #eee",
-    fontSize: "14px",
-  },
-
-  operational: {
-    color: "#16a34a",
-    fontSize: "12px",
-    fontWeight: "bold",
-  },
-
-  actions: {
-    display: "grid",
-    gridTemplateColumns:
-      "repeat(5, 1fr)",
-    gap: "12px",
-    marginTop: "20px",
-  },
-
-  action: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: "10px",
-    padding: "15px",
+    padding: "18px",
     border: "1px solid #e5e7eb",
-    borderRadius: "10px",
-    textDecoration: "none",
-    color: "#111827",
-    fontSize: "13px",
+    borderRadius: "11px",
+    backgroundColor: "#ffffff",
+    cursor: "pointer",
+    textAlign: "left",
   },
 
   actionIcon: {
-    fontSize: "20px",
-  },
-
-  securityNotice: {
+    width: "42px",
+    height: "42px",
+    flexShrink: 0,
     display: "flex",
-    gap: "15px",
     alignItems: "center",
-    padding: "18px",
-    backgroundColor: "#eff6ff",
-    borderRadius: "12px",
-    color: "#1e40af",
+    justifyContent: "center",
+    borderRadius: "9px",
   },
 
-  securityIcon: {
-    fontSize: "25px",
+  actionContent: {
+    flex: 1,
+  },
+
+  actionContentStrong: {
+    display: "block",
+  },
+
+  actionContentSpan: {
+    display: "block",
+  },
+
+  infoCard: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: "20px",
+    marginTop: "30px",
+    padding: "20px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "11px",
+  },
+
+  infoLabel: {
+    display: "block",
+    marginBottom: "5px",
+    color: "#94a3b8",
+    fontSize: "10px",
+  },
+
+  adminBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "5px 9px",
+    borderRadius: "20px",
+    backgroundColor: "#fffbeb",
+    color: "#b45309",
+    fontSize: "10px",
+    fontWeight: "700",
+  },
+
+  onlineBadge: {
+    color: "#15803d",
+    fontSize: "11px",
+    fontWeight: "600",
+  },
+
+  primaryButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "7px",
+    padding: "10px 15px",
+    border: "none",
+    borderRadius: "8px",
+    backgroundColor: "#2563eb",
+    color: "#ffffff",
+    cursor: "pointer",
+    fontSize: "12px",
+    fontWeight: "600",
+  },
+
+  loading: {
+    minHeight: "450px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#64748b",
+  },
+
+  spinner: {
+    width: "30px",
+    height: "30px",
+    marginBottom: "12px",
+    border: "3px solid #e2e8f0",
+    borderTop:
+      "3px solid #2563eb",
+    borderRadius: "50%",
+  },
+
+  errorPage: {
+    minHeight: "450px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+    color: "#64748b",
+  },
+
+  errorIcon: {
+    width: "55px",
+    height: "55px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: "15px",
+    borderRadius: "12px",
+    backgroundColor: "#fef2f2",
+    color: "#dc2626",
   },
 };
 

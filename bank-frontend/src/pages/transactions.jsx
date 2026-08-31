@@ -1,313 +1,414 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Search,
+  RefreshCw,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Eye,
+  X,
+  ReceiptText,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+
+import Layout from "../Components/Layout";
+import { getTransactions } from "../api/transactionApi";
+import { useAuth } from "../Context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 function Transactions() {
-  const [transactions] = useState([
-    {
-      id: "TXN1001",
-      description: "Salary Credit",
-      account: "Savings ****4582",
-      date: "2026-08-24",
-      type: "Credit",
-      amount: 50000,
-      status: "Completed",
-    },
-    {
-      id: "TXN1002",
-      description: "Amazon Shopping",
-      account: "Savings ****4582",
-      date: "2026-08-23",
-      type: "Debit",
-      amount: 2500,
-      status: "Completed",
-    },
-    {
-      id: "TXN1003",
-      description: "Electricity Bill",
-      account: "Current ****7821",
-      date: "2026-08-22",
-      type: "Debit",
-      amount: 1850,
-      status: "Completed",
-    },
-    {
-      id: "TXN1004",
-      description: "UPI Transfer",
-      account: "Savings ****4582",
-      date: "2026-08-21",
-      type: "Debit",
-      amount: 5000,
-      status: "Completed",
-    },
-    {
-      id: "TXN1005",
-      description: "Interest Credit",
-      account: "Savings ****4582",
-      date: "2026-08-20",
-      type: "Credit",
-      amount: 1250,
-      status: "Completed",
-    },
-    {
-      id: "TXN1006",
-      description: "ATM Withdrawal",
-      account: "Savings ****4582",
-      date: "2026-08-19",
-      type: "Debit",
-      amount: 10000,
-      status: "Completed",
-    },
-    {
-      id: "TXN1007",
-      description: "Mobile Recharge",
-      account: "Savings ****4582",
-      date: "2026-08-18",
-      type: "Debit",
-      amount: 599,
-      status: "Completed",
-    },
-    {
-      id: "TXN1008",
-      description: "Refund",
-      account: "Savings ****4582",
-      date: "2026-08-17",
-      type: "Credit",
-      amount: 2200,
-      status: "Completed",
-    },
-    {
-      id: "TXN1009",
-      description: "Bank Transfer",
-      account: "Current ****7821",
-      date: "2026-08-16",
-      type: "Debit",
-      amount: 15000,
-      status: "Completed",
-    },
-    {
-      id: "TXN1010",
-      description: "Cash Deposit",
-      account: "Current ****7821",
-      date: "2026-08-15",
-      type: "Credit",
-      amount: 30000,
-      status: "Completed",
-    },
-    {
-      id: "TXN1011",
-      description: "Insurance Payment",
-      account: "Current ****7821",
-      date: "2026-08-14",
-      type: "Debit",
-      amount: 4500,
-      status: "Completed",
-    },
-    {
-      id: "TXN1012",
-      description: "Salary Credit",
-      account: "Savings ****4582",
-      date: "2026-08-13",
-      type: "Credit",
-      amount: 50000,
-      status: "Completed",
-    },
-  ]);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("All");
+  const [filterType, setFilterType] = useState("All");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const transactionsPerPage = 5;
+  const [selectedTransaction, setSelectedTransaction] =
+    useState(null);
+
+  const itemsPerPage = 10;
+
+  // =====================================================
+  // LOAD TRANSACTIONS
+  // =====================================================
+
+  const loadTransactions = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await getTransactions();
+
+      setTransactions(data);
+    } catch (error) {
+      console.error(error);
+
+      if (error.response?.status === 401) {
+        logout();
+        navigate("/login");
+        return;
+      }
+
+      setError(
+        error.response?.data?.message ||
+          error.response?.data ||
+          "Unable to load transactions."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTransactions();
+  }, []);
+
+  // =====================================================
+  // FORMAT MONEY
+  // =====================================================
 
   const formatMoney = (amount) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency: "INR",
-    }).format(amount);
+    }).format(Number(amount || 0));
   };
 
-  // Search + filter
+  // =====================================================
+  // FORMAT DATE
+  // =====================================================
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  // =====================================================
+  // TRANSACTION TYPE
+  // =====================================================
+
+  const getTransactionType = (transaction) => {
+    const type = transaction.type?.toLowerCase();
+
+    if (type === "deposit") {
+      return "Credit";
+    }
+
+    if (type === "withdrawal") {
+      return "Debit";
+    }
+
+    if (
+      type === "transfersent" ||
+      type === "transfer"
+    ) {
+      return "Debit";
+    }
+
+    if (type === "transferreceived") {
+      return "Credit";
+    }
+
+    return "Debit";
+  };
+
+  // =====================================================
+  // FILTER
+  // =====================================================
+
   const filteredTransactions = useMemo(() => {
     return transactions.filter((transaction) => {
+      const transactionType =
+        getTransactionType(transaction);
+
+      const searchText = search
+        .toLowerCase()
+        .trim();
+
       const matchesSearch =
+        !searchText ||
+        transaction.referenceNumber
+          ?.toLowerCase()
+          .includes(searchText) ||
         transaction.description
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        transaction.id
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        transaction.account
-          .toLowerCase()
-          .includes(search.toLowerCase());
+          ?.toLowerCase()
+          .includes(searchText) ||
+        transaction.accountId
+          ?.toString()
+          .includes(searchText) ||
+        transaction.type
+          ?.toLowerCase()
+          .includes(searchText);
 
       const matchesType =
-        typeFilter === "All" ||
-        transaction.type === typeFilter;
+        filterType === "All" ||
+        transactionType === filterType;
 
       return matchesSearch && matchesType;
     });
-  }, [transactions, search, typeFilter]);
+  }, [transactions, search, filterType]);
 
-  // Pagination
+  // =====================================================
+  // PAGINATION
+  // =====================================================
+
   const totalPages = Math.ceil(
-    filteredTransactions.length / transactionsPerPage
+    filteredTransactions.length / itemsPerPage
   );
 
   const startIndex =
-    (currentPage - 1) * transactionsPerPage;
+    (currentPage - 1) * itemsPerPage;
 
-  const currentTransactions =
+  const displayedTransactions =
     filteredTransactions.slice(
       startIndex,
-      startIndex + transactionsPerPage
+      startIndex + itemsPerPage
     );
 
-  const handleSearch = (e) => {
-    setSearch(e.target.value);
+  const changeSearch = (value) => {
+    setSearch(value);
     setCurrentPage(1);
   };
 
-  const handleTypeChange = (e) => {
-    setTypeFilter(e.target.value);
+  const changeFilter = (value) => {
+    setFilterType(value);
     setCurrentPage(1);
   };
 
-  const goToPage = (page) => {
-    if (page >= 1 && page <= totalPages) {
-      setCurrentPage(page);
-    }
-  };
+  // =====================================================
+  // SUMMARY
+  // =====================================================
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    window.location.href = "/";
-  };
+  const creditTotal = transactions
+    .filter(
+      (transaction) =>
+        getTransactionType(transaction) ===
+        "Credit"
+    )
+    .reduce(
+      (total, transaction) =>
+        total + Number(transaction.amount || 0),
+      0
+    );
+
+  const debitTotal = transactions
+    .filter(
+      (transaction) =>
+        getTransactionType(transaction) ===
+        "Debit"
+    )
+    .reduce(
+      (total, transaction) =>
+        total + Number(transaction.amount || 0),
+      0
+    );
+
+  // =====================================================
+  // LOADING
+  // =====================================================
+
+  if (loading) {
+    return (
+      <Layout>
+        <div style={styles.loading}>
+          <div style={styles.spinner}></div>
+          <p>Loading transactions...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
-    <div style={styles.page}>
+    <Layout>
 
-      {/* Sidebar */}
-      <aside style={styles.sidebar}>
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
-        <h2 style={styles.logo}>
-          🏦 BankApp
-        </h2>
+      <div style={styles.pageHeader}>
 
-        <nav>
+        <div>
+          <p style={styles.eyebrow}>
+            ACTIVITY
+          </p>
 
-          <a href="/" style={styles.navItem}>
-            📊 Dashboard
-          </a>
+          <h1 style={styles.title}>
+            Transactions
+          </h1>
 
-          <a
-            href="/accounts"
-            style={styles.navItem}
-          >
-            💳 Accounts
-          </a>
-
-          <a
-            href="/transactions"
-            style={{
-              ...styles.navItem,
-              ...styles.activeNav,
-            }}
-          >
-            💸 Transactions
-          </a>
-
-          <a
-            href="/transfer"
-            style={styles.navItem}
-          >
-            🔄 Transfer
-          </a>
-
-          <a
-            href="/profile"
-            style={styles.navItem}
-          >
-            👤 Profile
-          </a>
-
-        </nav>
+          <p style={styles.subtitle}>
+            Review your recent banking activity.
+          </p>
+        </div>
 
         <button
-          onClick={handleLogout}
-          style={styles.logout}
+          style={styles.refreshButton}
+          onClick={loadTransactions}
         >
-          Logout
+          <RefreshCw size={16} />
+          Refresh
         </button>
 
-      </aside>
+      </div>
 
-      {/* Main */}
-      <main style={styles.main}>
+      {/* =================================================
+          ERROR
+      ================================================= */}
 
-        <div style={styles.header}>
+      {error && (
+        <div style={styles.errorMessage}>
+          {error}
+        </div>
+      )}
+
+      {/* =================================================
+          SUMMARY
+      ================================================= */}
+
+      <div style={styles.summaryGrid}>
+
+        <div style={styles.summaryCard}>
+
+          <div
+            style={{
+              ...styles.summaryIcon,
+              backgroundColor: "#eff6ff",
+              color: "#2563eb",
+            }}
+          >
+            <ReceiptText size={20} />
+          </div>
+
           <div>
-            <h1>Transaction History</h1>
+            <span style={styles.summaryLabel}>
+              Total Transactions
+            </span>
 
-            <p style={styles.subtitle}>
-              View and manage your account transactions
+            <strong style={styles.summaryValue}>
+              {transactions.length}
+            </strong>
+          </div>
+
+        </div>
+
+        <div style={styles.summaryCard}>
+
+          <div
+            style={{
+              ...styles.summaryIcon,
+              backgroundColor: "#f0fdf4",
+              color: "#16a34a",
+            }}
+          >
+            <ArrowDownLeft size={20} />
+          </div>
+
+          <div>
+            <span style={styles.summaryLabel}>
+              Total Credit
+            </span>
+
+            <strong
+              style={{
+                ...styles.summaryValue,
+                color: "#16a34a",
+              }}
+            >
+              {formatMoney(creditTotal)}
+            </strong>
+          </div>
+
+        </div>
+
+        <div style={styles.summaryCard}>
+
+          <div
+            style={{
+              ...styles.summaryIcon,
+              backgroundColor: "#fef2f2",
+              color: "#dc2626",
+            }}
+          >
+            <ArrowUpRight size={20} />
+          </div>
+
+          <div>
+            <span style={styles.summaryLabel}>
+              Total Debit
+            </span>
+
+            <strong
+              style={{
+                ...styles.summaryValue,
+                color: "#dc2626",
+              }}
+            >
+              {formatMoney(debitTotal)}
+            </strong>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* =================================================
+          TRANSACTION SECTION
+      ================================================= */}
+
+      <section style={styles.section}>
+
+        <div style={styles.sectionHeader}>
+
+          <div>
+            <h2 style={styles.sectionTitle}>
+              Transaction History
+            </h2>
+
+            <p style={styles.sectionSubtitle}>
+              Search and filter your transactions
             </p>
           </div>
-        </div>
-
-        {/* Summary */}
-        <div style={styles.summaryGrid}>
-
-          <div style={styles.summaryCard}>
-            <p>Total Transactions</p>
-            <h2>{transactions.length}</h2>
-          </div>
-
-          <div style={styles.summaryCard}>
-            <p>Credits</p>
-
-            <h2 style={styles.credit}>
-              {formatMoney(
-                transactions
-                  .filter((x) => x.type === "Credit")
-                  .reduce(
-                    (sum, x) => sum + x.amount,
-                    0
-                  )
-              )}
-            </h2>
-          </div>
-
-          <div style={styles.summaryCard}>
-            <p>Debits</p>
-
-            <h2 style={styles.debit}>
-              {formatMoney(
-                transactions
-                  .filter((x) => x.type === "Debit")
-                  .reduce(
-                    (sum, x) => sum + x.amount,
-                    0
-                  )
-              )}
-            </h2>
-          </div>
 
         </div>
 
-        {/* Filters */}
+        {/* FILTER BAR */}
+
         <div style={styles.filterCard}>
 
-          <input
-            type="text"
-            placeholder="Search transaction..."
-            value={search}
-            onChange={handleSearch}
-            style={styles.search}
-          />
+          <div style={styles.searchWrapper}>
+
+            <Search
+              size={17}
+              color="#94a3b8"
+            />
+
+            <input
+              type="text"
+              placeholder="Search reference, description or account..."
+              value={search}
+              onChange={(e) =>
+                changeSearch(e.target.value)
+              }
+              style={styles.searchInput}
+            />
+
+          </div>
 
           <select
-            value={typeFilter}
-            onChange={handleTypeChange}
+            value={filterType}
+            onChange={(e) =>
+              changeFilter(e.target.value)
+            }
             style={styles.select}
           >
             <option value="All">
@@ -325,376 +426,1068 @@ function Transactions() {
 
         </div>
 
-        {/* Table */}
+        {/* TABLE */}
+
         <div style={styles.tableCard}>
 
-          <div style={styles.tableWrapper}>
+          {displayedTransactions.length ===
+          0 ? (
 
-            <table style={styles.table}>
+            <div style={styles.empty}>
 
-              <thead>
-                <tr>
-                  <th>Transaction ID</th>
-                  <th>Description</th>
-                  <th>Account</th>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
+              <div style={styles.emptyIcon}>
+                <ReceiptText size={27} />
+              </div>
 
-              <tbody>
+              <h3>
+                No transactions found
+              </h3>
 
-                {currentTransactions.length > 0 ? (
+              <p>
+                Try changing your search or
+                filter.
+              </p>
 
-                  currentTransactions.map(
-                    (transaction) => (
-                      <tr key={transaction.id}>
+            </div>
 
-                        <td>
-                          <strong>
-                            {transaction.id}
-                          </strong>
-                        </td>
+          ) : (
 
-                        <td>
-                          {transaction.description}
-                        </td>
+            <>
 
-                        <td>
-                          {transaction.account}
-                        </td>
+              <div style={styles.tableWrapper}>
 
-                        <td>
-                          {transaction.date}
-                        </td>
+                <table style={styles.table}>
 
-                        <td>
+                  <thead>
 
-                          <span
+                    <tr>
+
+                      <th style={styles.th}>
+                        Transaction
+                      </th>
+
+                      <th style={styles.th}>
+                        Account
+                      </th>
+
+                      <th style={styles.th}>
+                        Date
+                      </th>
+
+                      <th style={styles.th}>
+                        Type
+                      </th>
+
+                      <th
+                        style={{
+                          ...styles.th,
+                          textAlign: "right",
+                        }}
+                      >
+                        Amount
+                      </th>
+
+                      <th
+                        style={{
+                          ...styles.th,
+                          textAlign: "center",
+                        }}
+                      >
+                        Action
+                      </th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody>
+
+                    {displayedTransactions.map(
+                      (transaction) => {
+
+                        const type =
+                          getTransactionType(
+                            transaction
+                          );
+
+                        const isCredit =
+                          type === "Credit";
+
+                        return (
+                          <tr
+                            key={
+                              transaction.id
+                            }
                             style={
-                              transaction.type ===
-                              "Credit"
-                                ? styles.creditBadge
-                                : styles.debitBadge
+                              styles.tableRow
                             }
                           >
-                            {transaction.type}
-                          </span>
 
-                        </td>
+                            {/* TRANSACTION */}
 
-                        <td
-                          style={
-                            transaction.type ===
-                            "Credit"
-                              ? styles.credit
-                              : styles.debit
-                          }
-                        >
-                          {transaction.type === "Credit"
-                            ? "+"
-                            : "-"}{" "}
-                          {formatMoney(
-                            transaction.amount
-                          )}
-                        </td>
+                            <td
+                              style={
+                                styles.td
+                              }
+                            >
 
-                        <td>
+                              <div
+                                style={
+                                  styles.transactionCell
+                                }
+                              >
 
-                          <span
-                            style={styles.statusBadge}
-                          >
-                            {transaction.status}
-                          </span>
+                                <div
+                                  style={{
+                                    ...styles.transactionIcon,
+                                    backgroundColor:
+                                      isCredit
+                                        ? "#f0fdf4"
+                                        : "#fef2f2",
+                                    color: isCredit
+                                      ? "#16a34a"
+                                      : "#dc2626",
+                                  }}
+                                >
+                                  {isCredit ? (
+                                    <ArrowDownLeft
+                                      size={17}
+                                    />
+                                  ) : (
+                                    <ArrowUpRight
+                                      size={17}
+                                    />
+                                  )}
+                                </div>
 
-                        </td>
+                                <div>
 
-                      </tr>
-                    )
-                  )
+                                  <strong
+                                    style={
+                                      styles.description
+                                    }
+                                  >
+                                    {transaction.description ||
+                                      transaction.type}
+                                  </strong>
 
-                ) : (
+                                  <span
+                                    style={
+                                      styles.reference
+                                    }
+                                  >
+                                    {transaction.referenceNumber ||
+                                      `Transaction #${transaction.id}`}
+                                  </span>
 
-                  <tr>
-                    <td
-                      colSpan="7"
-                      style={styles.empty}
-                    >
-                      No transactions found.
-                    </td>
-                  </tr>
+                                </div>
 
-                )}
+                              </div>
 
-              </tbody>
+                            </td>
 
-            </table>
+                            {/* ACCOUNT */}
 
-          </div>
+                            <td
+                              style={
+                                styles.td
+                              }
+                            >
 
-          {/* Pagination */}
-          <div style={styles.pagination}>
+                              <span
+                                style={
+                                  styles.accountNumber
+                                }
+                              >
+                                Account #
+                                {transaction.accountId}
+                              </span>
 
-            <div style={styles.pageInfo}>
-              Showing{" "}
-              {filteredTransactions.length === 0
-                ? 0
-                : startIndex + 1}{" "}
-              -
-              {Math.min(
-                startIndex + transactionsPerPage,
-                filteredTransactions.length
-              )}{" "}
-              of {filteredTransactions.length}
-            </div>
+                            </td>
 
-            <div style={styles.pageButtons}>
+                            {/* DATE */}
+
+                            <td
+                              style={
+                                styles.td
+                              }
+                            >
+
+                              <span
+                                style={
+                                  styles.date
+                                }
+                              >
+                                {formatDate(
+                                  transaction.createdAt
+                                )}
+                              </span>
+
+                            </td>
+
+                            {/* TYPE */}
+
+                            <td
+                              style={
+                                styles.td
+                              }
+                            >
+
+                              <span
+                                style={
+                                  isCredit
+                                    ? styles.creditBadge
+                                    : styles.debitBadge
+                                }
+                              >
+                                {type}
+                              </span>
+
+                            </td>
+
+                            {/* AMOUNT */}
+
+                            <td
+                              style={{
+                                ...styles.td,
+                                textAlign:
+                                  "right",
+                              }}
+                            >
+
+                              <strong
+                                style={{
+                                  color: isCredit
+                                    ? "#16a34a"
+                                    : "#dc2626",
+                                  fontSize:
+                                    "13px",
+                                }}
+                              >
+                                {isCredit
+                                  ? "+"
+                                  : "-"}
+                                {formatMoney(
+                                  transaction.amount
+                                )}
+                              </strong>
+
+                            </td>
+
+                            {/* ACTION */}
+
+                            <td
+                              style={{
+                                ...styles.td,
+                                textAlign:
+                                  "center",
+                              }}
+                            >
+
+                              <button
+                                style={
+                                  styles.viewButton
+                                }
+                                onClick={() =>
+                                  setSelectedTransaction(
+                                    transaction
+                                  )
+                                }
+                              >
+                                <Eye
+                                  size={15}
+                                />
+                                View
+                              </button>
+
+                            </td>
+
+                          </tr>
+                        );
+                      }
+                    )}
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+              {/* PAGINATION */}
+
+              <div style={styles.pagination}>
+
+                <span
+                  style={
+                    styles.paginationInfo
+                  }
+                >
+                  Showing{" "}
+                  <strong>
+                    {startIndex + 1}
+                  </strong>{" "}
+                  to{" "}
+                  <strong>
+                    {Math.min(
+                      startIndex +
+                        itemsPerPage,
+                      filteredTransactions.length
+                    )}
+                  </strong>{" "}
+                  of{" "}
+                  <strong>
+                    {
+                      filteredTransactions.length
+                    }
+                  </strong>
+                </span>
+
+                <div
+                  style={
+                    styles.paginationButtons
+                  }
+                >
+
+                  <button
+                    disabled={
+                      currentPage === 1
+                    }
+                    onClick={() =>
+                      setCurrentPage(
+                        currentPage - 1
+                      )
+                    }
+                    style={
+                      styles.pageButton
+                    }
+                  >
+                    <ChevronLeft size={16} />
+                    Previous
+                  </button>
+
+                  <span
+                    style={
+                      styles.pageNumber
+                    }
+                  >
+                    {currentPage} /{" "}
+                    {totalPages || 1}
+                  </span>
+
+                  <button
+                    disabled={
+                      currentPage >=
+                      totalPages
+                    }
+                    onClick={() =>
+                      setCurrentPage(
+                        currentPage + 1
+                      )
+                    }
+                    style={
+                      styles.pageButton
+                    }
+                  >
+                    Next
+                    <ChevronRight
+                      size={16}
+                    />
+                  </button>
+
+                </div>
+
+              </div>
+
+            </>
+
+          )}
+
+        </div>
+
+      </section>
+
+      {/* =================================================
+          USER INFORMATION
+      ================================================= */}
+
+      <div style={styles.infoCard}>
+
+        <div>
+          <span style={styles.infoLabel}>
+            Account Holder
+          </span>
+
+          <strong>
+            {user?.fullName || "Customer"}
+          </strong>
+        </div>
+
+        <div>
+          <span style={styles.infoLabel}>
+            Email
+          </span>
+
+          <strong>
+            {user?.email || "Not available"}
+          </strong>
+        </div>
+
+        <div>
+          <span style={styles.infoLabel}>
+            Filtered Results
+          </span>
+
+          <strong>
+            {filteredTransactions.length}
+          </strong>
+        </div>
+
+      </div>
+
+      {/* =================================================
+          TRANSACTION MODAL
+      ================================================= */}
+
+      {selectedTransaction && (
+
+        <div
+          style={styles.modalOverlay}
+          onClick={() =>
+            setSelectedTransaction(null)
+          }
+        >
+
+          <div
+            style={styles.modal}
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+
+            <div style={styles.modalHeader}>
+
+              <div>
+                <p style={styles.eyebrow}>
+                  TRANSACTION
+                </p>
+
+                <h2>
+                  Transaction Details
+                </h2>
+              </div>
 
               <button
+                style={styles.modalClose}
                 onClick={() =>
-                  goToPage(currentPage - 1)
+                  setSelectedTransaction(null)
                 }
-                disabled={currentPage === 1}
-                style={styles.pageButton}
               >
-                ← Previous
+                <X size={20} />
               </button>
 
-              {Array.from(
-                { length: totalPages },
-                (_, index) => index + 1
-              ).map((page) => (
+            </div>
 
-                <button
-                  key={page}
-                  onClick={() =>
-                    goToPage(page)
-                  }
+            <div
+              style={styles.modalAmount}
+            >
+
+              <div
+                style={{
+                  ...styles.modalIcon,
+                  backgroundColor:
+                    getTransactionType(
+                      selectedTransaction
+                    ) === "Credit"
+                      ? "#f0fdf4"
+                      : "#fef2f2",
+                  color:
+                    getTransactionType(
+                      selectedTransaction
+                    ) === "Credit"
+                      ? "#16a34a"
+                      : "#dc2626",
+                }}
+              >
+                {getTransactionType(
+                  selectedTransaction
+                ) === "Credit" ? (
+                  <ArrowDownLeft
+                    size={22}
+                  />
+                ) : (
+                  <ArrowUpRight
+                    size={22}
+                  />
+                )}
+              </div>
+
+              <div>
+
+                <span>
+                  {getTransactionType(
+                    selectedTransaction
+                  )}
+                </span>
+
+                <strong
                   style={{
-                    ...styles.pageButton,
-                    ...(currentPage === page
-                      ? styles.activePage
-                      : {}),
+                    color:
+                      getTransactionType(
+                        selectedTransaction
+                      ) === "Credit"
+                        ? "#16a34a"
+                        : "#dc2626",
                   }}
                 >
-                  {page}
-                </button>
+                  {getTransactionType(
+                    selectedTransaction
+                  ) === "Credit"
+                    ? "+"
+                    : "-"}
+                  {formatMoney(
+                    selectedTransaction.amount
+                  )}
+                </strong>
 
-              ))}
-
-              <button
-                onClick={() =>
-                  goToPage(currentPage + 1)
-                }
-                disabled={
-                  currentPage === totalPages ||
-                  totalPages === 0
-                }
-                style={styles.pageButton}
-              >
-                Next →
-              </button>
+              </div>
 
             </div>
+
+            <div style={styles.detailsList}>
+
+              <div>
+                <span>
+                  Reference
+                </span>
+
+                <strong>
+                  {selectedTransaction.referenceNumber ||
+                    "-"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Description
+                </span>
+
+                <strong>
+                  {selectedTransaction.description ||
+                    selectedTransaction.type ||
+                    "-"}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Account
+                </span>
+
+                <strong>
+                  #{selectedTransaction.accountId}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Date
+                </span>
+
+                <strong>
+                  {formatDate(
+                    selectedTransaction.createdAt
+                  )}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  Type
+                </span>
+
+                <strong>
+                  {getTransactionType(
+                    selectedTransaction
+                  )}
+                </strong>
+              </div>
+
+            </div>
+
+            <button
+              style={styles.modalDone}
+              onClick={() =>
+                setSelectedTransaction(null)
+              }
+            >
+              Done
+            </button>
 
           </div>
 
         </div>
 
-      </main>
+      )}
 
-    </div>
+    </Layout>
   );
 }
 
 const styles = {
-  page: {
+  pageHeader: {
     display: "flex",
-    minHeight: "100vh",
-    backgroundColor: "#f5f7fb",
-    fontFamily: "Arial, sans-serif",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    gap: "20px",
+    marginBottom: "28px",
   },
 
-  sidebar: {
-    width: "230px",
-    backgroundColor: "#111827",
-    color: "white",
-    padding: "25px 15px",
-    display: "flex",
-    flexDirection: "column",
+  eyebrow: {
+    margin: "0 0 7px",
+    color: "#2563eb",
+    fontSize: "11px",
+    fontWeight: "700",
+    letterSpacing: "0.1em",
   },
 
-  logo: {
-    textAlign: "center",
-    marginBottom: "40px",
-  },
-
-  navItem: {
-    display: "block",
-    padding: "14px",
-    marginBottom: "8px",
-    borderRadius: "8px",
-    color: "white",
-    textDecoration: "none",
-  },
-
-  activeNav: {
-    backgroundColor: "#2563eb",
-  },
-
-  logout: {
-    marginTop: "auto",
-    padding: "12px",
-    border: "none",
-    borderRadius: "8px",
-    backgroundColor: "#dc2626",
-    color: "white",
-    cursor: "pointer",
-  },
-
-  main: {
-    flex: 1,
-    padding: "35px",
-    overflow: "auto",
-  },
-
-  header: {
-    marginBottom: "30px",
+  title: {
+    margin: 0,
+    color: "#0f172a",
+    fontSize: "28px",
+    fontWeight: "700",
   },
 
   subtitle: {
-    color: "#6b7280",
+    margin: "7px 0 0",
+    color: "#64748b",
+    fontSize: "14px",
+  },
+
+  refreshButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "7px",
+    padding: "10px 15px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "8px",
+    backgroundColor: "#ffffff",
+    color: "#475569",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: "600",
+  },
+
+  errorMessage: {
+    padding: "12px 15px",
+    marginBottom: "18px",
+    backgroundColor: "#fef2f2",
+    border: "1px solid #fecaca",
+    borderRadius: "8px",
+    color: "#b91c1c",
+    fontSize: "13px",
   },
 
   summaryGrid: {
     display: "grid",
     gridTemplateColumns:
       "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "20px",
-    marginBottom: "25px",
+    gap: "15px",
   },
 
   summaryCard: {
-    backgroundColor: "white",
-    padding: "22px",
+    display: "flex",
+    alignItems: "center",
+    gap: "13px",
+    padding: "19px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
     borderRadius: "12px",
-    boxShadow:
-      "0 3px 12px rgba(0,0,0,0.05)",
+  },
+
+  summaryIcon: {
+    width: "42px",
+    height: "42px",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "10px",
+  },
+
+  summaryLabel: {
+    display: "block",
+    marginBottom: "5px",
+    color: "#64748b",
+    fontSize: "12px",
+  },
+
+  summaryValue: {
+    display: "block",
+    color: "#0f172a",
+    fontSize: "20px",
+  },
+
+  section: {
+    marginTop: "35px",
+  },
+
+  sectionHeader: {
+    marginBottom: "16px",
+  },
+
+  sectionTitle: {
+    margin: 0,
+    color: "#0f172a",
+    fontSize: "18px",
+  },
+
+  sectionSubtitle: {
+    margin: "5px 0 0",
+    color: "#94a3b8",
+    fontSize: "12px",
   },
 
   filterCard: {
-    backgroundColor: "white",
-    padding: "20px",
-    borderRadius: "12px",
     display: "flex",
-    gap: "15px",
-    marginBottom: "20px",
+    gap: "10px",
+    alignItems: "center",
+    padding: "15px",
+    marginBottom: "12px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "11px",
   },
 
-  search: {
+  searchWrapper: {
     flex: 1,
-    padding: "12px",
-    border: "1px solid #d1d5db",
+    minWidth: "200px",
+    display: "flex",
+    alignItems: "center",
+    gap: "9px",
+    padding: "0 12px",
+    border: "1px solid #e2e8f0",
     borderRadius: "8px",
-    fontSize: "15px",
+    backgroundColor: "#ffffff",
+  },
+
+  searchInput: {
+    width: "100%",
+    padding: "11px 0",
+    border: "none",
+    outline: "none",
+    fontSize: "13px",
+    color: "#334155",
   },
 
   select: {
-    padding: "12px",
-    border: "1px solid #d1d5db",
+    padding: "11px 12px",
+    border: "1px solid #e2e8f0",
     borderRadius: "8px",
-    backgroundColor: "white",
+    backgroundColor: "#ffffff",
+    color: "#475569",
+    fontSize: "13px",
+    outline: "none",
+    cursor: "pointer",
   },
 
   tableCard: {
-    backgroundColor: "white",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
     borderRadius: "12px",
     overflow: "hidden",
   },
 
   tableWrapper: {
+    width: "100%",
     overflowX: "auto",
   },
 
   table: {
     width: "100%",
+    minWidth: "850px",
     borderCollapse: "collapse",
   },
 
-  credit: {
-    color: "#16a34a",
-    fontWeight: "bold",
+  th: {
+    padding: "14px 17px",
+    textAlign: "left",
+    backgroundColor: "#f8fafc",
+    borderBottom: "1px solid #e5e7eb",
+    color: "#64748b",
+    fontSize: "11px",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
   },
 
-  debit: {
-    color: "#dc2626",
-    fontWeight: "bold",
+  tableRow: {
+    transition: "background-color 0.15s",
+  },
+
+  td: {
+    padding: "15px 17px",
+    borderBottom: "1px solid #f1f5f9",
+    fontSize: "13px",
+    color: "#475569",
+    verticalAlign: "middle",
+  },
+
+  transactionCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: "11px",
+  },
+
+  transactionIcon: {
+    width: "37px",
+    height: "37px",
+    flexShrink: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "9px",
+  },
+
+  description: {
+    display: "block",
+    color: "#334155",
+    fontSize: "13px",
+    fontWeight: "600",
+  },
+
+  reference: {
+    display: "block",
+    maxWidth: "250px",
+    marginTop: "4px",
+    color: "#94a3b8",
+    fontSize: "10px",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+
+  accountNumber: {
+    color: "#475569",
+    fontSize: "12px",
+  },
+
+  date: {
+    color: "#64748b",
+    fontSize: "12px",
+    whiteSpace: "nowrap",
   },
 
   creditBadge: {
-    padding: "5px 10px",
+    display: "inline-block",
+    padding: "5px 9px",
     borderRadius: "20px",
-    backgroundColor: "#dcfce7",
+    backgroundColor: "#f0fdf4",
     color: "#15803d",
-    fontSize: "13px",
+    fontSize: "10px",
+    fontWeight: "700",
   },
 
   debitBadge: {
-    padding: "5px 10px",
+    display: "inline-block",
+    padding: "5px 9px",
     borderRadius: "20px",
-    backgroundColor: "#fee2e2",
+    backgroundColor: "#fef2f2",
     color: "#b91c1c",
-    fontSize: "13px",
+    fontSize: "10px",
+    fontWeight: "700",
   },
 
-  statusBadge: {
-    padding: "5px 10px",
-    borderRadius: "20px",
-    backgroundColor: "#dcfce7",
-    color: "#15803d",
-    fontSize: "13px",
-  },
-
-  empty: {
-    textAlign: "center",
-    padding: "40px",
-    color: "#6b7280",
+  viewButton: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "5px",
+    padding: "7px 10px",
+    border: "1px solid #dbeafe",
+    borderRadius: "7px",
+    backgroundColor: "#eff6ff",
+    color: "#2563eb",
+    cursor: "pointer",
+    fontSize: "11px",
+    fontWeight: "600",
   },
 
   pagination: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "20px",
-    borderTop: "1px solid #eee",
-    gap: "20px",
-    flexWrap: "wrap",
+    gap: "15px",
+    padding: "15px 17px",
+    borderTop: "1px solid #f1f5f9",
   },
 
-  pageInfo: {
-    color: "#6b7280",
+  paginationInfo: {
+    color: "#94a3b8",
+    fontSize: "11px",
   },
 
-  pageButtons: {
+  paginationButtons: {
     display: "flex",
-    gap: "6px",
     alignItems: "center",
+    gap: "8px",
   },
 
   pageButton: {
-    padding: "8px 12px",
-    border: "1px solid #d1d5db",
-    borderRadius: "6px",
-    backgroundColor: "white",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "7px 10px",
+    border: "1px solid #e2e8f0",
+    borderRadius: "7px",
+    backgroundColor: "#ffffff",
+    color: "#475569",
+    cursor: "pointer",
+    fontSize: "11px",
+  },
+
+  pageNumber: {
+    color: "#64748b",
+    fontSize: "11px",
+    fontWeight: "600",
+  },
+
+  empty: {
+    padding: "60px 20px",
+    textAlign: "center",
+    color: "#94a3b8",
+  },
+
+  emptyIcon: {
+    width: "52px",
+    height: "52px",
+    margin: "0 auto 13px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "12px",
+    backgroundColor: "#f8fafc",
+    color: "#64748b",
+  },
+
+  infoCard: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fit, minmax(180px, 1fr))",
+    gap: "20px",
+    marginTop: "25px",
+    padding: "20px",
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+  },
+
+  infoLabel: {
+    display: "block",
+    marginBottom: "5px",
+    color: "#94a3b8",
+    fontSize: "11px",
+  },
+
+  loading: {
+    minHeight: "400px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#64748b",
+  },
+
+  spinner: {
+    width: "30px",
+    height: "30px",
+    marginBottom: "12px",
+    border: "3px solid #e2e8f0",
+    borderTop: "3px solid #2563eb",
+    borderRadius: "50%",
+  },
+
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 1000,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "20px",
+    backgroundColor:
+      "rgba(15,23,42,0.45)",
+  },
+
+  modal: {
+    width: "100%",
+    maxWidth: "480px",
+    padding: "25px",
+    boxSizing: "border-box",
+    backgroundColor: "#ffffff",
+    borderRadius: "14px",
+    boxShadow:
+      "0 20px 50px rgba(0,0,0,0.15)",
+  },
+
+  modalHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: "25px",
+  },
+
+  modalClose: {
+    width: "34px",
+    height: "34px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    borderRadius: "8px",
+    backgroundColor: "#f8fafc",
+    color: "#64748b",
     cursor: "pointer",
   },
 
-  activePage: {
+  modalAmount: {
+    display: "flex",
+    alignItems: "center",
+    gap: "13px",
+    padding: "17px",
+    marginBottom: "20px",
+    backgroundColor: "#f8fafc",
+    borderRadius: "10px",
+  },
+
+  modalIcon: {
+    width: "45px",
+    height: "45px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "10px",
+  },
+
+  detailsList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "15px",
+  },
+
+  detailsListItem: {
+    display: "flex",
+    justifyContent: "space-between",
+  },
+
+  modalDone: {
+    width: "100%",
+    marginTop: "25px",
+    padding: "11px",
+    border: "none",
+    borderRadius: "8px",
     backgroundColor: "#2563eb",
     color: "white",
-    borderColor: "#2563eb",
+    cursor: "pointer",
+    fontWeight: "600",
   },
 };
 

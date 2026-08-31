@@ -1,3 +1,7 @@
+using FluentValidation;
+using BankApi.Dto.Transaction;
+
+namespace BankApi.Validators;
 public class DepositRequestValidator : AbstractValidator<DepositRequest>
 {
     public DepositRequestValidator()

@@ -1,58 +1,37 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../Context/AuthContext";
 
 function Profile() {
-  const savedUser = JSON.parse(
-    localStorage.getItem("user") || "{}"
-  );
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
-  const [profile, setProfile] = useState({
-    fullName: savedUser.fullName || "",
-    email: savedUser.email || "",
-    phone: savedUser.phone || "",
-    address: savedUser.address || "",
-  });
+  const [profile, setProfile] = useState(null);
 
-  const [message, setMessage] = useState("");
-
-  const handleChange = (e) => {
-    setProfile({
-      ...profile,
-      [e.target.name]: e.target.value,
-    });
-
-    setMessage("");
-  };
-
-  const handleSave = (e) => {
-    e.preventDefault();
-
-    const updatedUser = {
-      ...savedUser,
-      fullName: profile.fullName,
-      email: profile.email,
-      phone: profile.phone,
-      address: profile.address,
-    };
-
-    localStorage.setItem(
-      "user",
-      JSON.stringify(updatedUser)
-    );
-
-    setMessage("Profile updated successfully.");
-  };
+  useEffect(() => {
+    if (user) {
+      setProfile(user);
+    }
+  }, [user]);
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    window.location.href = "/";
+    logout();
+    navigate("/login");
   };
+
+  if (!profile) {
+    return (
+      <div style={styles.loading}>
+        Loading profile...
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
 
-      {/* Sidebar */}
+      {/* ================= SIDEBAR ================= */}
+
       <aside style={styles.sidebar}>
 
         <h2 style={styles.logo}>
@@ -61,266 +40,175 @@ function Profile() {
 
         <nav>
 
-          <a href="/" style={styles.navItem}>
-            📊 Dashboard
-          </a>
-
-          <a
-            href="/accounts"
+          <button
             style={styles.navItem}
+            onClick={() =>
+              navigate("/dashboard")
+            }
+          >
+            📊 Dashboard
+          </button>
+
+          <button
+            style={styles.navItem}
+            onClick={() =>
+              navigate("/account")
+            }
           >
             💳 Accounts
-          </a>
+          </button>
 
-          <a
-            href="/transactions"
+          <button
             style={styles.navItem}
+            onClick={() =>
+              navigate("/transactions")
+            }
           >
             💸 Transactions
-          </a>
+          </button>
 
-          <a
-            href="/transfer"
+          <button
             style={styles.navItem}
+            onClick={() =>
+              navigate("/transfer")
+            }
           >
             🔄 Transfer
-          </a>
+          </button>
 
-          <a
-            href="/profile"
+          <button
             style={{
               ...styles.navItem,
               ...styles.activeNav,
             }}
           >
             👤 Profile
-          </a>
+          </button>
 
         </nav>
 
         <button
-          onClick={handleLogout}
           style={styles.logout}
+          onClick={handleLogout}
         >
           Logout
         </button>
 
       </aside>
 
+      {/* ================= MAIN ================= */}
 
-      {/* Main */}
       <main style={styles.main}>
 
         <div style={styles.header}>
-          <h1>My Profile</h1>
+          <div>
+            <h1>My Profile</h1>
 
-          <p style={styles.subtitle}>
-            Manage your personal information
-          </p>
-        </div>
-
-
-        <div style={styles.grid}>
-
-          {/* Profile Card */}
-          <div style={styles.profileCard}>
-
-            <div style={styles.avatar}>
-              {profile.fullName
-                ? profile.fullName
-                    .charAt(0)
-                    .toUpperCase()
-                : "U"}
-            </div>
-
-            <h2>
-              {profile.fullName || "Customer"}
-            </h2>
-
-            <p style={styles.email}>
-              {profile.email ||
-                "email@example.com"}
+            <p style={styles.subtitle}>
+              View your account information
             </p>
+          </div>
+        </div>
 
-            <div style={styles.role}>
-              {savedUser.role || "Customer"}
-            </div>
+        {/* ================= PROFILE CARD ================= */}
 
+        <div style={styles.profileCard}>
+
+          <div style={styles.avatar}>
+            {profile.fullName
+              ?.charAt(0)
+              ?.toUpperCase() || "U"}
           </div>
 
+          <h2>
+            {profile.fullName || "Customer"}
+          </h2>
 
-          {/* Edit Profile */}
-          <div style={styles.formCard}>
+          <p style={styles.role}>
+            {profile.role || "Customer"}
+          </p>
 
-            <h2>Personal Information</h2>
+        </div>
 
-            <form onSubmit={handleSave}>
+        {/* ================= INFORMATION ================= */}
 
-              <div style={styles.row}>
+        <div style={styles.infoCard}>
 
-                <div style={styles.inputGroup}>
+          <h2>Personal Information</h2>
 
-                  <label>
-                    Full Name
-                  </label>
+          <div style={styles.infoGrid}>
 
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={profile.fullName}
-                    onChange={handleChange}
-                    placeholder="Enter full name"
-                    style={styles.input}
-                  />
+            <div style={styles.infoItem}>
+              <small>Full Name</small>
 
-                </div>
+              <p>
+                {profile.fullName ||
+                  "Not available"}
+              </p>
+            </div>
 
+            <div style={styles.infoItem}>
+              <small>Email Address</small>
 
-                <div style={styles.inputGroup}>
+              <p>
+                {profile.email ||
+                  "Not available"}
+              </p>
+            </div>
 
-                  <label>
-                    Email
-                  </label>
+            <div style={styles.infoItem}>
+              <small>Role</small>
 
-                  <input
-                    type="email"
-                    name="email"
-                    value={profile.email}
-                    onChange={handleChange}
-                    placeholder="Enter email"
-                    style={styles.input}
-                  />
+              <p>
+                {profile.role ||
+                  "Customer"}
+              </p>
+            </div>
 
-                </div>
+            <div style={styles.infoItem}>
+              <small>User ID</small>
 
-              </div>
-
-
-              <div style={styles.row}>
-
-                <div style={styles.inputGroup}>
-
-                  <label>
-                    Phone Number
-                  </label>
-
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={profile.phone}
-                    onChange={handleChange}
-                    placeholder="Enter phone number"
-                    style={styles.input}
-                  />
-
-                </div>
-
-
-                <div style={styles.inputGroup}>
-
-                  <label>
-                    Role
-                  </label>
-
-                  <input
-                    type="text"
-                    value={
-                      savedUser.role ||
-                      "Customer"
-                    }
-                    disabled
-                    style={{
-                      ...styles.input,
-                      backgroundColor:
-                        "#f3f4f6",
-                    }}
-                  />
-
-                </div>
-
-              </div>
-
-
-              <div style={styles.inputGroup}>
-
-                <label>
-                  Address
-                </label>
-
-                <textarea
-                  name="address"
-                  value={profile.address}
-                  onChange={handleChange}
-                  placeholder="Enter your address"
-                  rows="4"
-                  style={styles.textarea}
-                />
-
-              </div>
-
-
-              <button
-                type="submit"
-                style={styles.saveButton}
-              >
-                Save Changes
-              </button>
-
-            </form>
-
-
-            {message && (
-              <div style={styles.success}>
-                ✓ {message}
-              </div>
-            )}
+              <p style={styles.userId}>
+                {profile.userId ||
+                  "Not available"}
+              </p>
+            </div>
 
           </div>
 
         </div>
 
+        {/* ================= SECURITY ================= */}
 
-        {/* Security */}
         <div style={styles.securityCard}>
 
-          <div>
-            <h2>🔐 Account Security</h2>
+          <h2>Security</h2>
 
-            <p>
-              Keep your account secure by
-              regularly updating your password.
-            </p>
+          <div style={styles.securityRow}>
+
+            <div>
+              <strong>
+                Password
+              </strong>
+
+              <p style={styles.muted}>
+                Your password is securely
+                stored as a hash.
+              </p>
+            </div>
+
+            <button
+              style={styles.securityButton}
+              onClick={() =>
+                alert(
+                  "Password change feature will be added in the next phase."
+                )
+              }
+            >
+              Change Password
+            </button>
+
           </div>
-
-          <button
-            style={styles.passwordButton}
-            onClick={() =>
-              alert(
-                "Password change page will be connected to the API next."
-              )
-            }
-          >
-            Change Password
-          </button>
-
-        </div>
-
-
-        {/* Account Status */}
-        <div style={styles.statusCard}>
-
-          <div>
-            <h2>Account Status</h2>
-
-            <p>
-              Your banking account is currently
-              active.
-            </p>
-          </div>
-
-          <span style={styles.active}>
-            ● Active
-          </span>
 
         </div>
 
@@ -330,9 +218,7 @@ function Profile() {
   );
 }
 
-
 const styles = {
-
   page: {
     display: "flex",
     minHeight: "100vh",
@@ -356,11 +242,16 @@ const styles = {
 
   navItem: {
     display: "block",
+    width: "100%",
     padding: "14px",
     marginBottom: "8px",
     borderRadius: "8px",
+    border: "none",
+    backgroundColor: "transparent",
     color: "white",
-    textDecoration: "none",
+    textAlign: "left",
+    cursor: "pointer",
+    fontSize: "15px",
   },
 
   activeNav: {
@@ -380,7 +271,7 @@ const styles = {
   main: {
     flex: 1,
     padding: "35px",
-    overflow: "auto",
+    overflowX: "auto",
   },
 
   header: {
@@ -391,120 +282,85 @@ const styles = {
     color: "#6b7280",
   },
 
-  grid: {
-    display: "grid",
-    gridTemplateColumns:
-      "280px minmax(400px, 1fr)",
-    gap: "25px",
-  },
-
   profileCard: {
     backgroundColor: "white",
     borderRadius: "15px",
     padding: "35px",
     textAlign: "center",
-    height: "fit-content",
     boxShadow:
-      "0 3px 12px rgba(0,0,0,0.05)",
+      "0 3px 12px rgba(0,0,0,0.06)",
+    marginBottom: "25px",
   },
 
   avatar: {
-    width: "90px",
-    height: "90px",
+    width: "80px",
+    height: "80px",
     borderRadius: "50%",
     backgroundColor: "#2563eb",
     color: "white",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    fontSize: "38px",
+    margin: "0 auto 15px",
+    fontSize: "32px",
     fontWeight: "bold",
-    margin: "0 auto 20px",
-  },
-
-  email: {
-    color: "#6b7280",
   },
 
   role: {
-    display: "inline-block",
-    marginTop: "15px",
-    padding: "7px 15px",
-    borderRadius: "20px",
-    backgroundColor: "#dbeafe",
-    color: "#1d4ed8",
-    fontSize: "14px",
+    color: "#6b7280",
   },
 
-  formCard: {
+  infoCard: {
     backgroundColor: "white",
     padding: "30px",
     borderRadius: "15px",
     boxShadow:
-      "0 3px 12px rgba(0,0,0,0.05)",
+      "0 3px 12px rgba(0,0,0,0.06)",
+    marginBottom: "25px",
   },
 
-  row: {
+  infoGrid: {
     display: "grid",
     gridTemplateColumns:
-      "1fr 1fr",
-    gap: "20px",
-  },
-
-  inputGroup: {
-    display: "flex",
-    flexDirection: "column",
-    marginTop: "20px",
-  },
-
-  input: {
-    marginTop: "8px",
-    padding: "12px",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    fontSize: "15px",
-  },
-
-  textarea: {
-    marginTop: "8px",
-    padding: "12px",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    fontSize: "15px",
-    resize: "vertical",
-  },
-
-  saveButton: {
+      "repeat(auto-fit, minmax(250px, 1fr))",
+    gap: "25px",
     marginTop: "25px",
-    padding: "13px 25px",
-    border: "none",
-    borderRadius: "8px",
-    backgroundColor: "#2563eb",
-    color: "white",
-    cursor: "pointer",
-    fontSize: "15px",
   },
 
-  success: {
-    marginTop: "20px",
-    padding: "12px",
+  infoItem: {
+    padding: "15px",
+    backgroundColor: "#f9fafb",
     borderRadius: "8px",
-    backgroundColor: "#dcfce7",
-    color: "#15803d",
+  },
+
+  userId: {
+    fontSize: "12px",
+    wordBreak: "break-all",
   },
 
   securityCard: {
-    marginTop: "25px",
-    padding: "25px",
-    borderRadius: "15px",
     backgroundColor: "white",
+    padding: "30px",
+    borderRadius: "15px",
+    boxShadow:
+      "0 3px 12px rgba(0,0,0,0.06)",
+  },
+
+  securityRow: {
+    marginTop: "20px",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: "20px",
   },
 
-  passwordButton: {
-    padding: "11px 18px",
+  muted: {
+    color: "#6b7280",
+    fontSize: "14px",
+  },
+
+  securityButton: {
+    padding: "10px 18px",
     border: "1px solid #2563eb",
     borderRadius: "8px",
     backgroundColor: "white",
@@ -512,19 +368,12 @@ const styles = {
     cursor: "pointer",
   },
 
-  statusCard: {
-    marginTop: "25px",
-    padding: "25px",
-    borderRadius: "15px",
-    backgroundColor: "white",
+  loading: {
+    minHeight: "100vh",
     display: "flex",
-    justifyContent: "space-between",
+    justifyContent: "center",
     alignItems: "center",
-  },
-
-  active: {
-    color: "#16a34a",
-    fontWeight: "bold",
+    fontFamily: "Arial, sans-serif",
   },
 };
 

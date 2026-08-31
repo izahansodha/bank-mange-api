@@ -1,8 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
+using BankApi.Dto.Transaction.Migrations;
 
 #nullable disable
 
-namespace BankApi.Migrations
+namespace BankApi.Dto.Transaction.Migrations
 {
     /// <inheritdoc />
     public partial class accountstatusupdate : Migration

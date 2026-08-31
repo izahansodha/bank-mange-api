@@ -1,3 +1,8 @@
+using BankApi.Dto.Transaction;
+using FluentValidation;
+
+namespace BankApi.Validators;
+
 public class WithdrawRequestValidator : AbstractValidator<WithdrawRequest>
 {
     public WithdrawRequestValidator()

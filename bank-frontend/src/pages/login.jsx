@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useAuth } from "../Context/AuthContext";
 
 function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -13,52 +16,29 @@ function Login() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "https://localhost:7000/api/Auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: email,
-            password: password,
-          }),
-        }
-      );
+      const data = await login(email, password);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setMessage(
-          data.message || data.title || "Invalid email or password"
-        );
-        return;
-      }
-
-      // Save JWT
-      localStorage.setItem("token", data.token);
-
-      // Save user information
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          userId: data.userId,
-          fullName: data.fullName,
-          email: data.email,
-          role: data.role,
-        })
-      );
+      console.log("Login successful:", data);
 
       setMessage("Login successful!");
 
-      console.log("JWT:", data.token);
-      console.log("User:", data);
+      // Temporary:
+      // We'll add proper navigation after routing is configured.
+      window.location.href = "/dashboard";
     } catch (error) {
       console.error(error);
-      setMessage(
-        "Unable to connect to the Bank API."
-      );
+
+      if (error.response) {
+        setMessage(
+          error.response.data?.message ||
+          error.response.data ||
+          "Invalid email or password"
+        );
+      } else {
+        setMessage(
+          "Unable to connect to the Bank API."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -67,7 +47,9 @@ function Login() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>Bank Management</h1>
+        <h1 style={styles.title}>
+          Bank Management
+        </h1>
 
         <p style={styles.subtitle}>
           Login to your account
@@ -82,7 +64,9 @@ function Login() {
               type="email"
               placeholder="Enter your email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
               required
             />
           </div>
@@ -94,7 +78,9 @@ function Login() {
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
               required
             />
           </div>
@@ -104,7 +90,9 @@ function Login() {
             disabled={loading}
             style={styles.button}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading
+              ? "Logging in..."
+              : "Login"}
           </button>
 
         </form>

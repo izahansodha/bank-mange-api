@@ -1,12 +1,15 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Claims;
+using System.Text;
 using BankApi.data;
 using BankApi.Dto.Auth;
+using BankApi.Dto.Transaction;
 using BankApi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace BankApi.Services;
 
@@ -74,9 +77,17 @@ public class AuthService : IAuthServices
         request.Password
     );
 
-    _context.Users.Add(user);
+        _context.Users.Add(user);
+        var customer = new Customer
+{
+    Name = user.FullName,
+    UserId = user.Id,
+    Balance = 0
+};
 
-    await _context.SaveChangesAsync();
+_context.Customers.Add(customer);
+
+        await _context.SaveChangesAsync();
 
     var token = GenerateToken(user);
 

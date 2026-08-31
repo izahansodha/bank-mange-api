@@ -15,6 +15,23 @@
           }
         }
       },
+      "FluentValidation.DependencyInjectionExtensions/12.1.1": {
+        "type": "package",
+        "dependencies": {
+          "FluentValidation": "12.1.1",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "2.1.0"
+        },
+        "compile": {
+          "lib/net8.0/FluentValidation.DependencyInjectionExtensions.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/FluentValidation.DependencyInjectionExtensions.dll": {
+            "related": ".xml"
+          }
+        }
+      },
       "Humanizer.Core/2.14.1": {
         "type": "package",
         "compile": {
@@ -1065,6 +1082,21 @@
         "fluentvalidation.nuspec",
         "lib/net8.0/FluentValidation.dll",
         "lib/net8.0/FluentValidation.xml"
+      ]
+    },
+    "FluentValidation.DependencyInjectionExtensions/12.1.1": {
+      "sha512": "D0VXh4dtjjX2aQizuaa0g6R8X3U1JaVqJPfGCvLwZX9t/O2h7tkpbitbadQMfwcgSPdDbI2vDxuwRMv/Uf9dHA==",
+      "type": "package",
+      "path": "fluentvalidation.dependencyinjectionextensions/12.1.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "README.md",
+        "fluent-validation-icon.png",
+        "fluentvalidation.dependencyinjectionextensions.12.1.1.nupkg.sha512",
+        "fluentvalidation.dependencyinjectionextensions.nuspec",
+        "lib/net8.0/FluentValidation.DependencyInjectionExtensions.dll",
+        "lib/net8.0/FluentValidation.DependencyInjectionExtensions.xml"
       ]
     },
     "Humanizer.Core/2.14.1": {
@@ -2864,6 +2896,7 @@
   "projectFileDependencyGroups": {
     "net8.0": [
       "FluentValidation >= 12.1.1",
+      "FluentValidation.DependencyInjectionExtensions >= 12.1.1",
       "Microsoft.AspNetCore.Authentication.JwtBearer >= 8.0.30",
       "Microsoft.EntityFrameworkCore >= 8.*",
       "Microsoft.EntityFrameworkCore.Design >= 8.*",
@@ -2872,19 +2905,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\dell\\.nuget\\packages\\": {}
+    "C:\\Users\\izaha\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "E:\\bankapi\\bank-mange-api\\BankApi.csproj",
+      "projectUniqueName": "D:\\code sof\\resume project react\\ai power dot net bank manage system\\bank-mange-api\\BankApi.csproj",
       "projectName": "BankApi",
-      "projectPath": "E:\\bankapi\\bank-mange-api\\BankApi.csproj",
-      "packagesPath": "C:\\Users\\dell\\.nuget\\packages\\",
-      "outputPath": "E:\\bankapi\\bank-mange-api\\obj\\",
+      "projectPath": "D:\\code sof\\resume project react\\ai power dot net bank manage system\\bank-mange-api\\BankApi.csproj",
+      "packagesPath": "C:\\Users\\izaha\\.nuget\\packages\\",
+      "outputPath": "D:\\code sof\\resume project react\\ai power dot net bank manage system\\bank-mange-api\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\dell\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\izaha\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -2914,6 +2947,10 @@
         "targetAlias": "net8.0",
         "dependencies": {
           "FluentValidation": {
+            "target": "Package",
+            "version": "[12.1.1, )"
+          },
+          "FluentValidation.DependencyInjectionExtensions": {
             "target": "Package",
             "version": "[12.1.1, )"
           },

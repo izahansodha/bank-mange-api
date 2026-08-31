@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { useAuth } from "../Context/AuthContext";
 
 function Register() {
+  const { register } = useAuth();
+
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -24,51 +27,36 @@ function Register() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        "https://localhost:7000/api/Auth/register",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(form),
-        }
+      await register(
+        form.fullName,
+        form.email,
+        form.password
       );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setMessage(
-          data.message ||
-          data.title ||
-          "Registration failed"
-        );
-        return;
-      }
-
-      // Save JWT returned by API
-      localStorage.setItem("token", data.token);
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          userId: data.userId,
-          fullName: data.fullName,
-          email: data.email,
-          role: data.role,
-        })
+      setMessage(
+        "Registration successful! You can now login."
       );
 
-      setMessage("Registration successful!");
-
-      console.log(data);
+      setForm({
+        fullName: "",
+        email: "",
+        password: "",
+      });
 
     } catch (error) {
       console.error(error);
 
-      setMessage(
-        "Unable to connect to Bank API."
-      );
+      if (error.response) {
+        setMessage(
+          error.response.data?.message ||
+          error.response.data ||
+          "Registration failed."
+        );
+      } else {
+        setMessage(
+          "Unable to connect to Bank API."
+        );
+      }
     } finally {
       setLoading(false);
     }

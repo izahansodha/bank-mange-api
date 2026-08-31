@@ -1,12 +1,20 @@
 using System.ComponentModel.DataAnnotations;
-namespace BankApi.Models
+
+namespace BankApi.Models;
+
+public class Customer
 {
-    public class Customer
-    {
-        public int Id { get; set; }
-        [Required]
-        public string Name { get; set; }
-        [Range(0, double.MaxValue, ErrorMessage = "Balance must be a positive value")]
-        public decimal Balance { get; set; }
-    }
+    public int Id { get; set; }
+
+    [Required]
+    public string Name { get; set; } = string.Empty;
+
+    [Range(0, double.MaxValue,
+        ErrorMessage = "Balance must be a positive value")]
+    public decimal Balance { get; set; }
+
+    // Link Customer to the logged-in User
+    public Guid UserId { get; set; }
+
+    public User? User { get; set; }
 }

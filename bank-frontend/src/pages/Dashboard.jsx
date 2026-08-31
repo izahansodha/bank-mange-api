@@ -1,383 +1,1038 @@
 import { useEffect, useState } from "react";
+import {
+  Wallet,
+  CreditCard,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ArrowRight,
+  Plus,
+  Minus,
+} from "lucide-react";
+
+import Layout from "../Components/Layout";
+import { getMyAccounts } from "../api/accountApi";
+import { getTransactions } from "../api/transactionApi";
+import { useAuth } from "../Context/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 function Dashboard() {
-  const [user, setUser] = useState(null);
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const [accounts, setAccounts] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
+    loadDashboard();
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-    window.location.href = "/";
+      const [accountsData, transactionsData] =
+        await Promise.all([
+          getMyAccounts(),
+          getTransactions(),
+        ]);
+
+      setAccounts(accountsData);
+      setTransactions(transactionsData);
+    } catch (error) {
+      console.error(error);
+
+      if (error.response?.status === 401) {
+        logout();
+        navigate("/login");
+        return;
+      }
+
+      setError(
+        error.response?.data?.message ||
+          error.response?.data ||
+          "Unable to load dashboard."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const formatMoney = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(Number(amount || 0));
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }
+    );
+  };
+
+  const totalBalance = accounts.reduce(
+    (total, account) =>
+      total + Number(account.balance || 0),
+    0
+  );
+
+  const activeAccounts = accounts.filter(
+    (account) => account.status === "Active"
+  );
+
+  const totalDeposits = transactions
+    .filter(
+      (transaction) =>
+        transaction.type === "Deposit" ||
+        transaction.type === "TransferReceived"
+    )
+    .reduce(
+      (total, transaction) =>
+        total + Number(transaction.amount || 0),
+      0
+    );
+
+  const totalWithdrawals = transactions
+    .filter(
+      (transaction) =>
+        transaction.type === "Withdrawal" ||
+        transaction.type === "TransferSent"
+    )
+    .reduce(
+      (total, transaction) =>
+        total + Number(transaction.amount || 0),
+      0
+    );
+
+  const recentTransactions = [...transactions]
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt) -
+        new Date(a.createdAt)
+    )
+    .slice(0, 5);
+
+  const getTransactionType = (transaction) => {
+    if (
+      transaction.type === "Deposit" ||
+      transaction.type === "TransferReceived"
+    ) {
+      return "Credit";
+    }
+
+    return "Debit";
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div style={styles.loading}>
+          <div style={styles.spinner}></div>
+          <p>Loading your dashboard...</p>
+        </div>
+      </Layout>
+    );
+  }
+
   return (
-    <div style={styles.page}>
+    <Layout>
+      {/* PAGE HEADER */}
 
-      {/* Sidebar */}
-      <aside style={styles.sidebar}>
+      <div style={styles.pageHeader}>
+        <div>
+          <p style={styles.eyebrow}>
+            OVERVIEW
+          </p>
 
-        <h2 style={styles.logo}>
-          🏦 BankApp
-        </h2>
+          <h1 style={styles.title}>
+            Good morning,{" "}
+            {user?.fullName?.split(" ")[0] ||
+              "Customer"}
+          </h1>
 
-        <nav>
-
-          <div style={styles.navItem}>
-            📊 Dashboard
-          </div>
-
-          <div style={styles.navItem}>
-            💳 Accounts
-          </div>
-
-          <div style={styles.navItem}>
-            💸 Transactions
-          </div>
-
-          <div style={styles.navItem}>
-              🔄 Transfer
-          </div>
-
-          <div style={styles.navItem}>
-            👤 Profile
-          </div>
-
-        </nav>
+          <p style={styles.subtitle}>
+            Here's what's happening with your
+            accounts.
+          </p>
+        </div>
 
         <button
-          onClick={handleLogout}
-          style={styles.logout}
+          style={styles.primaryButton}
+          onClick={() => navigate("/transfer")}
         >
-          Logout
+          <ArrowDownToLine size={17} />
+          Transfer Money
         </button>
+      </div>
 
-      </aside>
+      {/* ERROR */}
 
+      {error && (
+        <div style={styles.error}>
+          {error}
+        </div>
+      )}
 
-      {/* Main Content */}
-      <main style={styles.main}>
+      {/* STAT CARDS */}
 
-        {/* Header */}
-        <header style={styles.header}>
+      <section style={styles.statsGrid}>
+
+        <div style={styles.statCard}>
+          <div style={styles.statTop}>
+            <div>
+              <span style={styles.statLabel}>
+                Total Balance
+              </span>
+
+              <h2 style={styles.statValue}>
+                {formatMoney(totalBalance)}
+              </h2>
+            </div>
+
+            <div
+              style={{
+                ...styles.statIcon,
+                backgroundColor: "#eff6ff",
+                color: "#2563eb",
+              }}
+            >
+              <Wallet size={21} />
+            </div>
+          </div>
+
+          <span style={styles.statFooter}>
+            Across all accounts
+          </span>
+        </div>
+
+        <div style={styles.statCard}>
+          <div style={styles.statTop}>
+            <div>
+              <span style={styles.statLabel}>
+                Active Accounts
+              </span>
+
+              <h2 style={styles.statValue}>
+                {activeAccounts.length}
+              </h2>
+            </div>
+
+            <div
+              style={{
+                ...styles.statIcon,
+                backgroundColor: "#f0fdf4",
+                color: "#16a34a",
+              }}
+            >
+              <CreditCard size={21} />
+            </div>
+          </div>
+
+          <span style={styles.statFooter}>
+            {accounts.length} total accounts
+          </span>
+        </div>
+
+        <div style={styles.statCard}>
+          <div style={styles.statTop}>
+            <div>
+              <span style={styles.statLabel}>
+                Total Deposits
+              </span>
+
+              <h2
+                style={{
+                  ...styles.statValue,
+                  color: "#16a34a",
+                }}
+              >
+                {formatMoney(totalDeposits)}
+              </h2>
+            </div>
+
+            <div
+              style={{
+                ...styles.statIcon,
+                backgroundColor: "#f0fdf4",
+                color: "#16a34a",
+              }}
+            >
+              <ArrowDownToLine size={21} />
+            </div>
+          </div>
+
+          <span style={styles.statFooter}>
+            Credit transactions
+          </span>
+        </div>
+
+        <div style={styles.statCard}>
+          <div style={styles.statTop}>
+            <div>
+              <span style={styles.statLabel}>
+                Total Withdrawals
+              </span>
+
+              <h2
+                style={{
+                  ...styles.statValue,
+                  color: "#dc2626",
+                }}
+              >
+                {formatMoney(totalWithdrawals)}
+              </h2>
+            </div>
+
+            <div
+              style={{
+                ...styles.statIcon,
+                backgroundColor: "#fef2f2",
+                color: "#dc2626",
+              }}
+            >
+              <ArrowUpFromLine size={21} />
+            </div>
+          </div>
+
+          <span style={styles.statFooter}>
+            Debit transactions
+          </span>
+        </div>
+
+      </section>
+
+      {/* ACCOUNTS */}
+
+      <section style={styles.section}>
+
+        <div style={styles.sectionHeader}>
 
           <div>
-            <h1>Dashboard</h1>
+            <h2 style={styles.sectionTitle}>
+              Your Accounts
+            </h2>
 
-            <p style={styles.welcome}>
-              Welcome back,{" "}
-              <strong>
-                {user?.fullName || "Customer"}
-              </strong>
+            <p style={styles.sectionSubtitle}>
+              Manage your bank accounts
             </p>
           </div>
 
-          <div style={styles.user}>
-            👤
-            <span>
-              {user?.email || "user@example.com"}
-            </span>
+          <button
+            style={styles.linkButton}
+            onClick={() =>
+              navigate("/account")
+            }
+          >
+            View all
+            <ArrowRight size={16} />
+          </button>
+
+        </div>
+
+        <div style={styles.accountsGrid}>
+
+          {accounts.length === 0 ? (
+            <div style={styles.emptyCard}>
+              <CreditCard size={30} />
+
+              <h3>No accounts yet</h3>
+
+              <p>
+                Open your first bank account to
+                get started.
+              </p>
+
+              <button
+                style={styles.primaryButton}
+                onClick={() =>
+                  navigate("/account")
+                }
+              >
+                <Plus size={17} />
+                Open Account
+              </button>
+            </div>
+          ) : (
+            accounts.slice(0, 3).map((account) => (
+              <div
+                key={account.id}
+                style={styles.accountCard}
+              >
+
+                <div style={styles.accountHeader}>
+
+                  <div>
+                    <span
+                      style={
+                        styles.accountLabel
+                      }
+                    >
+                      {account.accountType}
+                    </span>
+
+                    <p
+                      style={
+                        styles.accountNumber
+                      }
+                    >
+                      ••••{" "}
+                      {account.accountNumber?.slice(
+                        -4
+                      )}
+                    </p>
+                  </div>
+
+                  <CreditCard
+                    size={23}
+                    color="#2563eb"
+                  />
+
+                </div>
+
+                <div style={styles.accountBalance}>
+
+                  <span>
+                    Available balance
+                  </span>
+
+                  <strong>
+                    {formatMoney(
+                      account.balance
+                    )}
+                  </strong>
+
+                </div>
+
+                <div style={styles.accountBottom}>
+
+                  <span
+                    style={
+                      account.status ===
+                      "Active"
+                        ? styles.activeBadge
+                        : styles.closedBadge
+                    }
+                  >
+                    {account.status}
+                  </span>
+
+                  <button
+                    style={styles.smallButton}
+                    onClick={() =>
+                      navigate(
+                        `/account/${account.id}`
+                      )
+                    }
+                  >
+                    Details
+                  </button>
+
+                </div>
+
+              </div>
+            ))
+          )}
+
+        </div>
+
+      </section>
+
+      {/* QUICK ACTIONS */}
+
+      <section style={styles.section}>
+
+        <div style={styles.sectionHeader}>
+
+          <div>
+            <h2 style={styles.sectionTitle}>
+              Quick Actions
+            </h2>
+
+            <p style={styles.sectionSubtitle}>
+              Common banking operations
+            </p>
           </div>
 
-        </header>
+        </div>
 
+        <div style={styles.actionsGrid}>
 
-        {/* Cards */}
-        <section style={styles.cards}>
+          <button
+            style={styles.actionCard}
+            onClick={() =>
+              navigate("/deposit")
+            }
+          >
+            <div
+              style={{
+                ...styles.actionIcon,
+                backgroundColor: "#eff6ff",
+                color: "#2563eb",
+              }}
+            >
+              <Plus size={20} />
+            </div>
 
-          <div style={styles.card}>
-            <p>Total Balance</p>
+            <div>
+              <strong>Deposit</strong>
+              <span>
+                Add money to your account
+              </span>
+            </div>
 
-            <h2>₹ 1,25,500.00</h2>
+            <ArrowRight size={17} />
 
-            <span>
-              Available balance
-            </span>
+          </button>
+
+          <button
+            style={styles.actionCard}
+            onClick={() =>
+              navigate("/withdraw")
+            }
+          >
+            <div
+              style={{
+                ...styles.actionIcon,
+                backgroundColor: "#fef2f2",
+                color: "#dc2626",
+              }}
+            >
+              <Minus size={20} />
+            </div>
+
+            <div>
+              <strong>Withdraw</strong>
+              <span>
+                Withdraw money
+              </span>
+            </div>
+
+            <ArrowRight size={17} />
+
+          </button>
+
+          <button
+            style={styles.actionCard}
+            onClick={() =>
+              navigate("/transfer")
+            }
+          >
+            <div
+              style={{
+                ...styles.actionIcon,
+                backgroundColor: "#f0fdf4",
+                color: "#16a34a",
+              }}
+            >
+              <ArrowDownToLine size={20} />
+            </div>
+
+            <div>
+              <strong>Transfer</strong>
+              <span>
+                Send money between accounts
+              </span>
+            </div>
+
+            <ArrowRight size={17} />
+
+          </button>
+
+        </div>
+
+      </section>
+
+      {/* RECENT TRANSACTIONS */}
+
+      <section style={styles.section}>
+
+        <div style={styles.sectionHeader}>
+
+          <div>
+            <h2 style={styles.sectionTitle}>
+              Recent Transactions
+            </h2>
+
+            <p style={styles.sectionSubtitle}>
+              Your latest account activity
+            </p>
           </div>
 
+          <button
+            style={styles.linkButton}
+            onClick={() =>
+              navigate("/transactions")
+            }
+          >
+            View all
+            <ArrowRight size={16} />
+          </button>
 
-          <div style={styles.card}>
-            <p>Savings Account</p>
+        </div>
 
-            <h2>₹ 85,500.00</h2>
+        <div style={styles.transactionCard}>
 
-            <span>
-              **** 4582
-            </span>
-          </div>
+          {recentTransactions.length ===
+          0 ? (
+            <div style={styles.empty}>
+              <p>
+                No transactions yet.
+              </p>
+            </div>
+          ) : (
+            recentTransactions.map(
+              (transaction) => {
 
+                const type =
+                  getTransactionType(
+                    transaction
+                  );
 
-          <div style={styles.card}>
-            <p>Current Account</p>
+                const credit =
+                  type === "Credit";
 
-            <h2>₹ 40,000.00</h2>
+                return (
+                  <div
+                    key={transaction.id}
+                    style={
+                      styles.transactionRow
+                    }
+                  >
 
-            <span>
-              **** 7821
-            </span>
-          </div>
+                    <div
+                      style={
+                        styles.transactionLeft
+                      }
+                    >
 
+                      <div
+                        style={{
+                          ...styles.transactionIcon,
+                          backgroundColor:
+                            credit
+                              ? "#f0fdf4"
+                              : "#fef2f2",
+                          color: credit
+                            ? "#16a34a"
+                            : "#dc2626",
+                        }}
+                      >
+                        {credit ? (
+                          <ArrowDownToLine
+                            size={18}
+                          />
+                        ) : (
+                          <ArrowUpFromLine
+                            size={18}
+                          />
+                        )}
+                      </div>
 
-          <div style={styles.card}>
-            <p>Credit Due</p>
+                      <div>
 
-            <h2>₹ 12,500.00</h2>
+                        <strong
+                          style={
+                            styles.transactionDescription
+                          }
+                        >
+                          {transaction.description ||
+                            transaction.type}
+                        </strong>
 
-            <span>
-              Due this month
-            </span>
-          </div>
+                        <span
+                          style={
+                            styles.transactionDate
+                          }
+                        >
+                          {formatDate(
+                            transaction.createdAt
+                          )}
+                        </span>
 
-        </section>
+                      </div>
 
+                    </div>
 
-        {/* Quick Actions */}
-        <section style={styles.section}>
+                    <div
+                      style={
+                        styles.transactionRight
+                      }
+                    >
 
-          <h2>Quick Actions</h2>
+                      <strong
+                        style={{
+                          color: credit
+                            ? "#16a34a"
+                            : "#dc2626",
+                        }}
+                      >
+                        {credit ? "+" : "-"}
+                        {formatMoney(
+                          transaction.amount
+                        )}
+                      </strong>
 
-          <div style={styles.actions}>
+                      <span
+                        style={
+                          styles.transactionType
+                        }
+                      >
+                        {type}
+                      </span>
 
-            <button style={styles.actionButton}>
-              💸
-              <span>Transfer Money</span>
-            </button>
+                    </div>
 
-            <button style={styles.actionButton}>
-              💰
-              <span>Deposit</span>
-            </button>
+                  </div>
+                );
+              }
+            )
+          )}
 
-            <button style={styles.actionButton}>
-              📄
-              <span>Transactions</span>
-            </button>
+        </div>
 
-            <button style={styles.actionButton}>
-              🏦
-              <span>Accounts</span>
-            </button>
+      </section>
 
-          </div>
-
-        </section>
-
-
-        {/* Recent Transactions */}
-        <section style={styles.section}>
-
-          <div style={styles.transactionHeader}>
-            <h2>Recent Transactions</h2>
-
-            <button style={styles.viewButton}>
-              View All
-            </button>
-          </div>
-
-          <div style={styles.tableContainer}>
-
-            <table style={styles.table}>
-
-              <thead>
-
-                <tr>
-                  <th>Description</th>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Amount</th>
-                </tr>
-
-              </thead>
-
-              <tbody>
-
-                <tr>
-                  <td>Amazon Shopping</td>
-                  <td>24 Aug 2026</td>
-                  <td>Debit</td>
-                  <td style={styles.debit}>
-                    - ₹2,500
-                  </td>
-                </tr>
-
-                <tr>
-                  <td>Salary Credit</td>
-                  <td>23 Aug 2026</td>
-                  <td>Credit</td>
-                  <td style={styles.credit}>
-                    + ₹50,000
-                  </td>
-                </tr>
-
-                <tr>
-                  <td>Electricity Bill</td>
-                  <td>22 Aug 2026</td>
-                  <td>Debit</td>
-                  <td style={styles.debit}>
-                    - ₹1,850
-                  </td>
-                </tr>
-
-                <tr>
-                  <td>UPI Transfer</td>
-                  <td>21 Aug 2026</td>
-                  <td>Debit</td>
-                  <td style={styles.debit}>
-                    - ₹5,000
-                  </td>
-                </tr>
-
-              </tbody>
-
-            </table>
-
-          </div>
-
-        </section>
-
-      </main>
-
-    </div>
+    </Layout>
   );
 }
 
-
 const styles = {
-
-  page: {
-    display: "flex",
-    minHeight: "100vh",
-    backgroundColor: "#f5f7fb",
-    fontFamily: "Arial, sans-serif",
-  },
-
-  sidebar: {
-    width: "230px",
-    backgroundColor: "#111827",
-    color: "white",
-    padding: "25px 15px",
-    display: "flex",
-    flexDirection: "column",
-  },
-
-  logo: {
-    textAlign: "center",
-    marginBottom: "40px",
-  },
-
-  navItem: {
-    padding: "14px",
-    marginBottom: "8px",
-    borderRadius: "8px",
-    cursor: "pointer",
-  },
-
-  logout: {
-    marginTop: "auto",
-    padding: "12px",
-    border: "none",
-    borderRadius: "8px",
-    backgroundColor: "#dc2626",
-    color: "white",
-    cursor: "pointer",
-  },
-
-  main: {
-    flex: 1,
-    padding: "30px",
-  },
-
-  header: {
+  pageHeader: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "30px",
+    alignItems: "flex-end",
+    gap: "20px",
+    marginBottom: "32px",
   },
 
-  welcome: {
-    color: "#6b7280",
+  eyebrow: {
+    fontSize: "11px",
+    fontWeight: "700",
+    letterSpacing: "0.1em",
+    color: "#2563eb",
+    margin: "0 0 8px",
   },
 
-  user: {
+  title: {
+    fontSize: "28px",
+    margin: 0,
+    color: "#0f172a",
+    fontWeight: "700",
+  },
+
+  subtitle: {
+    color: "#64748b",
+    margin: "8px 0 0",
+    fontSize: "14px",
+  },
+
+  primaryButton: {
     display: "flex",
-    gap: "10px",
     alignItems: "center",
+    gap: "8px",
+    border: "none",
+    borderRadius: "8px",
+    backgroundColor: "#2563eb",
+    color: "white",
+    padding: "11px 17px",
+    cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "13px",
   },
 
-  cards: {
+  error: {
+    backgroundColor: "#fef2f2",
+    color: "#b91c1c",
+    border: "1px solid #fecaca",
+    padding: "12px 15px",
+    borderRadius: "8px",
+    marginBottom: "20px",
+  },
+
+  statsGrid: {
     display: "grid",
     gridTemplateColumns:
       "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "20px",
+    gap: "16px",
   },
 
-  card: {
-    backgroundColor: "white",
-    padding: "25px",
+  statCard: {
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
     borderRadius: "12px",
-    boxShadow:
-      "0 2px 10px rgba(0,0,0,0.05)",
+    padding: "20px",
+  },
+
+  statTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+
+  statLabel: {
+    display: "block",
+    fontSize: "13px",
+    color: "#64748b",
+    marginBottom: "8px",
+  },
+
+  statValue: {
+    margin: 0,
+    fontSize: "23px",
+    color: "#0f172a",
+  },
+
+  statIcon: {
+    width: "42px",
+    height: "42px",
+    borderRadius: "10px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  statFooter: {
+    display: "block",
+    marginTop: "15px",
+    fontSize: "12px",
+    color: "#94a3b8",
   },
 
   section: {
-    marginTop: "35px",
+    marginTop: "36px",
   },
 
-  actions: {
+  sectionHeader: {
     display: "flex",
-    gap: "15px",
-    flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "16px",
   },
 
-  actionButton: {
-    padding: "18px 25px",
+  sectionTitle: {
+    margin: 0,
+    fontSize: "18px",
+    color: "#0f172a",
+  },
+
+  sectionSubtitle: {
+    margin: "5px 0 0",
+    color: "#94a3b8",
+    fontSize: "12px",
+  },
+
+  linkButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
     border: "none",
-    borderRadius: "10px",
-    backgroundColor: "white",
+    backgroundColor: "transparent",
+    color: "#2563eb",
     cursor: "pointer",
-    boxShadow:
-      "0 2px 8px rgba(0,0,0,0.05)",
+    fontSize: "13px",
+    fontWeight: "600",
   },
 
-  transactionHeader: {
+  accountsGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "16px",
+  },
+
+  accountCard: {
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
+    borderRadius: "12px",
+    padding: "20px",
+  },
+
+  accountHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+
+  accountLabel: {
+    fontSize: "13px",
+    color: "#64748b",
+  },
+
+  accountNumber: {
+    margin: "5px 0 0",
+    fontSize: "14px",
+    fontWeight: "600",
+    color: "#334155",
+  },
+
+  accountBalance: {
+    marginTop: "28px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "5px",
+  },
+
+  accountBottom: {
+    marginTop: "20px",
+    paddingTop: "15px",
+    borderTop: "1px solid #f1f5f9",
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
   },
 
-  viewButton: {
+  activeBadge: {
+    color: "#15803d",
+    backgroundColor: "#f0fdf4",
+    padding: "5px 9px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: "600",
+  },
+
+  closedBadge: {
+    color: "#b91c1c",
+    backgroundColor: "#fef2f2",
+    padding: "5px 9px",
+    borderRadius: "20px",
+    fontSize: "11px",
+    fontWeight: "600",
+  },
+
+  smallButton: {
     border: "none",
-    background: "transparent",
+    backgroundColor: "transparent",
+    color: "#2563eb",
     cursor: "pointer",
+    fontSize: "12px",
+    fontWeight: "600",
   },
 
-  tableContainer: {
-    marginTop: "15px",
-    backgroundColor: "white",
+  actionsGrid: {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fit, minmax(250px, 1fr))",
+    gap: "12px",
+  },
+
+  actionCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: "13px",
+    padding: "17px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "11px",
+    backgroundColor: "#ffffff",
+    cursor: "pointer",
+    textAlign: "left",
+    color: "#64748b",
+  },
+
+  actionIcon: {
+    width: "40px",
+    height: "40px",
+    flexShrink: 0,
+    borderRadius: "9px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  transactionCard: {
+    backgroundColor: "#ffffff",
+    border: "1px solid #e5e7eb",
     borderRadius: "12px",
-    overflow: "auto",
+    overflow: "hidden",
   },
 
-  table: {
-    width: "100%",
-    borderCollapse: "collapse",
+  transactionRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "16px 20px",
+    borderBottom: "1px solid #f1f5f9",
   },
 
-  debit: {
-    color: "#dc2626",
+  transactionLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: "13px",
   },
 
-  credit: {
-    color: "#16a34a",
+  transactionIcon: {
+    width: "38px",
+    height: "38px",
+    borderRadius: "9px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  transactionDescription: {
+    display: "block",
+    fontSize: "13px",
+    color: "#334155",
+  },
+
+  transactionDate: {
+    display: "block",
+    marginTop: "4px",
+    fontSize: "11px",
+    color: "#94a3b8",
+  },
+
+  transactionRight: {
+    textAlign: "right",
+  },
+
+  transactionType: {
+    display: "block",
+    marginTop: "4px",
+    fontSize: "11px",
+    color: "#94a3b8",
+  },
+
+  empty: {
+    padding: "40px",
+    textAlign: "center",
+    color: "#94a3b8",
+  },
+
+  emptyCard: {
+    backgroundColor: "#ffffff",
+    border: "1px dashed #cbd5e1",
+    borderRadius: "12px",
+    padding: "40px",
+    textAlign: "center",
+    color: "#64748b",
+  },
+
+  loading: {
+    minHeight: "400px",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#64748b",
+  },
+
+  spinner: {
+    width: "30px",
+    height: "30px",
+    border: "3px solid #e2e8f0",
+    borderTop: "3px solid #2563eb",
+    borderRadius: "50%",
+    marginBottom: "12px",
   },
 };
-
 
 export default Dashboard;

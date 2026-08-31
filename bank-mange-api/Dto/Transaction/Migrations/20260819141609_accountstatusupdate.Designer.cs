@@ -6,14 +6,15 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using BankApi.Dto.Transaction.Migrations;
 
 #nullable disable
 
-namespace BankApi.Migrations
+namespace BankApi.Dto.Transaction.Migrations
 {
     [DbContext(typeof(BankContext))]
-    [Migration("20260819135305_makeAccoutNumberUnique")]
-    partial class makeAccoutNumberUnique
+    [Migration("20260819141609_accountstatusupdate")]
+    partial class accountstatusupdate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -49,6 +50,10 @@ namespace BankApi.Migrations
 
                     b.Property<int>("CustomerId")
                         .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

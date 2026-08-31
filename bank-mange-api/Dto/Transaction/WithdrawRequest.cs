@@ -1,4 +1,7 @@
-public class WithdrawRequest{
-    public Guid AccountId{ get;set;}
+namespace BankApi.Dto.Transaction;
+
+public class WithdrawRequest
+{
+    public int AccountId{ get;set;}
     public decimal Amount { get;set;}
 }

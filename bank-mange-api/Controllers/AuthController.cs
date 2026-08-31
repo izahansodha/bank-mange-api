@@ -8,30 +8,50 @@ namespace BankApi.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly IAuthServices  _authService;
+    private readonly IAuthServices _authService;
 
     public AuthController(IAuthServices authService)
     {
         _authService = authService;
     }
 
+
+    // =====================================================
+    // REGISTER
+    // =====================================================
+
     [HttpPost("register")]
     public async Task<IActionResult> Register(
-        RegisterRequest request)
+        [FromBody] RegisterRequest request)
     {
-        var result = await _authService.RegisterAsync(request);
+        try
+        {
+            var result = await _authService.RegisterAsync(request);
 
-        return Ok(result);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
     }
+
+
+    // =====================================================
+    // LOGIN
+    // =====================================================
 
     [HttpPost("login")]
     public async Task<IActionResult> Login(
-        LoginRequest request)
+        [FromBody] LoginRequest request)
     {
         var result = await _authService.LoginAsync(request);
 
         if (result == null)
-            return Unauthorized("Invalid email or password.");
+        {
+            return Unauthorized(
+                "Invalid email or password.");
+        }
 
         return Ok(result);
     }

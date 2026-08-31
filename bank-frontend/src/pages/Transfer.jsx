@@ -1,455 +1,339 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getMyAccounts } from "../api/accountApi";
+import { transfer } from "../api/transactionApi";
+import { useNavigate } from "react-router-dom";
 
 function Transfer() {
-  const [form, setForm] = useState({
-    fromAccount: "",
-    toAccount: "",
-    amount: "",
-    description: "",
-  });
+  const navigate = useNavigate();
 
-  const [message, setMessage] = useState("");
+  const [accounts, setAccounts] = useState([]);
+  const [fromAccountId, setFromAccountId] = useState("");
+  const [toAccountId, setToAccountId] = useState("");
+  const [amount, setAmount] = useState("");
+
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const accounts = [
-    {
-      id: "4582",
-      name: "Savings Account",
-      balance: 85500,
-    },
-    {
-      id: "7821",
-      name: "Current Account",
-      balance: 40000,
-    },
-  ];
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+  useEffect(() => {
+    loadAccounts();
+  }, []);
 
-    setMessage("");
+  const loadAccounts = async () => {
+    try {
+      setLoadingAccounts(true);
+
+      const data = await getMyAccounts();
+
+      const activeAccounts = data.filter(
+        (account) => account.status === "Active"
+      );
+
+      setAccounts(activeAccounts);
+
+      if (activeAccounts.length >= 1) {
+        setFromAccountId(activeAccounts[0].id);
+      }
+
+      if (activeAccounts.length >= 2) {
+        setToAccountId(activeAccounts[1].id);
+      }
+    } catch (error) {
+      console.error(error);
+
+      if (error.response?.status === 401) {
+        navigate("/login");
+        return;
+      }
+
+      setError(
+        error.response?.data?.message ||
+          error.response?.data ||
+          "Unable to load accounts."
+      );
+    } finally {
+      setLoadingAccounts(false);
+    }
   };
+
+  const selectedFromAccount = accounts.find(
+    (account) =>
+      Number(account.id) === Number(fromAccountId)
+  );
 
   const handleTransfer = async (e) => {
     e.preventDefault();
 
     setMessage("");
+    setError("");
 
-    const amount = Number(form.amount);
+    const numericAmount = Number(amount);
 
-    if (!form.fromAccount) {
-      setMessage("Please select the source account.");
+    if (!fromAccountId || !toAccountId) {
+      setError("Please select both accounts.");
       return;
     }
 
-    if (!form.toAccount) {
-      setMessage("Please enter the receiver account.");
-      return;
-    }
-
-    if (form.fromAccount === form.toAccount) {
-      setMessage(
-        "Source and receiver account cannot be the same."
+    if (
+      Number(fromAccountId) === Number(toAccountId)
+    ) {
+      setError(
+        "From Account and To Account cannot be the same."
       );
       return;
     }
 
-    if (!amount || amount <= 0) {
-      setMessage("Please enter a valid amount.");
+    if (!numericAmount || numericAmount <= 0) {
+      setError("Amount must be greater than zero.");
       return;
     }
 
-    const selectedAccount = accounts.find(
-      (account) => account.id === form.fromAccount
-    );
-
-    if (selectedAccount && amount > selectedAccount.balance) {
-      setMessage("Insufficient balance.");
+    if (numericAmount > 1000000) {
+      setError("Amount cannot exceed ₹10,00,000.");
       return;
     }
 
-    setLoading(true);
+    if (
+      selectedFromAccount &&
+      numericAmount >
+        Number(selectedFromAccount.balance)
+    ) {
+      setError("Insufficient balance.");
+      return;
+    }
 
-    /*
-      API connection will be added here.
+    try {
+      setLoading(true);
 
-      Example:
-
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        "https://localhost:7000/api/Transfers",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            fromAccountId: form.fromAccount,
-            toAccountNumber: form.toAccount,
-            amount: amount,
-            description: form.description,
-          }),
-        }
-      );
-    */
-
-    setTimeout(() => {
-      setLoading(false);
-
-      setMessage(
-        `Transfer request of ₹${amount.toLocaleString(
-          "en-IN"
-        )} submitted successfully.`
-      );
-
-      setForm({
-        fromAccount: "",
-        toAccount: "",
-        amount: "",
-        description: "",
+      await transfer({
+        fromAccountId: Number(fromAccountId),
+        toAccountId: Number(toAccountId),
+        amount: numericAmount,
       });
-    }, 800);
-  };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+      setMessage("Transfer successful!");
 
-    window.location.href = "/";
+      setAmount("");
+
+      setTimeout(() => {
+        navigate("/transactions");
+      }, 1000);
+    } catch (error) {
+      console.error(error);
+
+      if (error.response?.status === 401) {
+        navigate("/login");
+        return;
+      }
+
+      setError(
+        error.response?.data?.message ||
+          error.response?.data ||
+          "Transfer failed."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div style={styles.page}>
-
-      {/* Sidebar */}
-      <aside style={styles.sidebar}>
-
-        <h2 style={styles.logo}>
-          🏦 BankApp
-        </h2>
-
-        <nav>
-
-          <a href="/" style={styles.navItem}>
-            📊 Dashboard
-          </a>
-
-          <a
-            href="/accounts"
-            style={styles.navItem}
-          >
-            💳 Accounts
-          </a>
-
-          <a
-            href="/transactions"
-            style={styles.navItem}
-          >
-            💸 Transactions
-          </a>
-
-          <a
-            href="/transfer"
-            style={{
-              ...styles.navItem,
-              ...styles.activeNav,
-            }}
-          >
-            🔄 Transfer
-          </a>
-
-          <a
-            href="/profile"
-            style={styles.navItem}
-          >
-            👤 Profile
-          </a>
-
-        </nav>
+      <div style={styles.card}>
 
         <button
-          onClick={handleLogout}
-          style={styles.logout}
+          style={styles.backButton}
+          onClick={() => navigate("/account")}
         >
-          Logout
+          ← Back to Accounts
         </button>
 
-      </aside>
+        <h1 style={styles.title}>
+          Transfer Money
+        </h1>
 
+        <p style={styles.subtitle}>
+          Transfer money between bank accounts
+        </p>
 
-      {/* Main */}
-      <main style={styles.main}>
-
-        <div style={styles.header}>
-          <div>
-            <h1>Transfer Money</h1>
-
-            <p style={styles.subtitle}>
-              Send money securely to another account
-            </p>
+        {message && (
+          <div style={styles.success}>
+            {message}
           </div>
-        </div>
+        )}
 
+        {error && (
+          <div style={styles.error}>
+            {error}
+          </div>
+        )}
 
-        <div style={styles.content}>
+        {loadingAccounts ? (
+          <p>Loading accounts...</p>
+        ) : accounts.length < 2 ? (
+          <div style={styles.empty}>
+            <h3>Two active accounts required</h3>
 
-          {/* Transfer Form */}
-          <div style={styles.card}>
+            <p>
+              You need at least two active accounts
+              to make a transfer.
+            </p>
 
-            <h2>Make a Transfer</h2>
+            <button
+              style={styles.button}
+              onClick={() => navigate("/account")}
+            >
+              Go to Accounts
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleTransfer}>
 
-            <form onSubmit={handleTransfer}>
+            <div style={styles.inputGroup}>
+              <label>From Account</label>
 
-              {/* From Account */}
-              <div style={styles.inputGroup}>
-
-                <label>
-                  From Account
-                </label>
-
-                <select
-                  name="fromAccount"
-                  value={form.fromAccount}
-                  onChange={handleChange}
-                  style={styles.input}
-                >
-                  <option value="">
-                    Select account
-                  </option>
-
-                  {accounts.map((account) => (
-                    <option
-                      key={account.id}
-                      value={account.id}
-                    >
-                      {account.name} - ****{" "}
-                      {account.id}
-                    </option>
-                  ))}
-                </select>
-
-              </div>
-
-
-              {/* Receiver */}
-              <div style={styles.inputGroup}>
-
-                <label>
-                  Receiver Account Number
-                </label>
-
-                <input
-                  type="text"
-                  name="toAccount"
-                  value={form.toAccount}
-                  onChange={handleChange}
-                  placeholder="Enter account number"
-                  style={styles.input}
-                />
-
-              </div>
-
-
-              {/* Amount */}
-              <div style={styles.inputGroup}>
-
-                <label>
-                  Amount
-                </label>
-
-                <div style={styles.amountBox}>
-
-                  <span>₹</span>
-
-                  <input
-                    type="number"
-                    name="amount"
-                    value={form.amount}
-                    onChange={handleChange}
-                    placeholder="0.00"
-                    min="1"
-                    step="0.01"
-                    style={styles.amountInput}
-                  />
-
-                </div>
-
-              </div>
-
-
-              {/* Description */}
-              <div style={styles.inputGroup}>
-
-                <label>
-                  Description
-                </label>
-
-                <textarea
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
-                  placeholder="Payment description"
-                  rows="4"
-                  style={styles.textarea}
-                />
-
-              </div>
-
-
-              <button
-                type="submit"
-                disabled={loading}
-                style={styles.transferButton}
+              <select
+                value={fromAccountId}
+                onChange={(e) =>
+                  setFromAccountId(e.target.value)
+                }
+                style={styles.input}
               >
-                {loading
-                  ? "Processing..."
-                  : "Transfer Money"}
-              </button>
+                {accounts.map((account) => (
+                  <option
+                    key={account.id}
+                    value={account.id}
+                  >
+                    {account.accountType} -{" "}
+                    {account.accountNumber}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            </form>
+            {selectedFromAccount && (
+              <div style={styles.balanceBox}>
+                <span>Available Balance</span>
 
-
-            {message && (
-              <div style={styles.message}>
-                {message}
+                <strong>
+                  {formatMoney(
+                    selectedFromAccount.balance
+                  )}
+                </strong>
               </div>
             )}
 
-          </div>
-
-
-          {/* Information */}
-          <div>
-
-            <div style={styles.infoCard}>
-
-              <h2>💡 Transfer Information</h2>
-
-              <p>
-                Please verify the receiver account
-                number before sending money.
-              </p>
-
-              <p>
-                Transfers are processed securely
-                through the banking system.
-              </p>
-
-              <p>
-                Make sure you have sufficient
-                balance before transferring.
-              </p>
-
+            <div style={styles.arrow}>
+              ↓
             </div>
 
+            <div style={styles.inputGroup}>
+              <label>To Account</label>
 
-            <div style={styles.limitCard}>
-
-              <h3>Daily Transfer Limit</h3>
-
-              <h2>₹5,00,000</h2>
-
-              <p>
-                Maximum amount you can transfer
-                per day.
-              </p>
-
+              <select
+                value={toAccountId}
+                onChange={(e) =>
+                  setToAccountId(e.target.value)
+                }
+                style={styles.input}
+              >
+                {accounts.map((account) => (
+                  <option
+                    key={account.id}
+                    value={account.id}
+                  >
+                    {account.accountType} -{" "}
+                    {account.accountNumber}
+                  </option>
+                ))}
+              </select>
             </div>
 
-          </div>
+            <div style={styles.inputGroup}>
+              <label>Amount</label>
 
-        </div>
+              <input
+                type="number"
+                min="1"
+                max="1000000"
+                step="0.01"
+                placeholder="Enter amount"
+                value={amount}
+                onChange={(e) =>
+                  setAmount(e.target.value)
+                }
+                style={styles.input}
+                required
+              />
+            </div>
 
-      </main>
+            <button
+              type="submit"
+              disabled={loading}
+              style={styles.button}
+            >
+              {loading
+                ? "Processing..."
+                : "Transfer Money"}
+            </button>
 
+          </form>
+        )}
+
+      </div>
     </div>
   );
 }
 
+function formatMoney(amount) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+  }).format(Number(amount || 0));
+}
 
 const styles = {
-
   page: {
-    display: "flex",
     minHeight: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "#f5f7fb",
     fontFamily: "Arial, sans-serif",
   },
 
-  sidebar: {
-    width: "230px",
-    backgroundColor: "#111827",
-    color: "white",
-    padding: "25px 15px",
-    display: "flex",
-    flexDirection: "column",
-  },
-
-  logo: {
-    textAlign: "center",
-    marginBottom: "40px",
-  },
-
-  navItem: {
-    display: "block",
-    padding: "14px",
-    marginBottom: "8px",
-    borderRadius: "8px",
-    color: "white",
-    textDecoration: "none",
-  },
-
-  activeNav: {
-    backgroundColor: "#2563eb",
-  },
-
-  logout: {
-    marginTop: "auto",
-    padding: "12px",
-    border: "none",
-    borderRadius: "8px",
-    backgroundColor: "#dc2626",
-    color: "white",
-    cursor: "pointer",
-  },
-
-  main: {
-    flex: 1,
+  card: {
+    width: "420px",
+    backgroundColor: "white",
     padding: "35px",
+    borderRadius: "15px",
+    boxShadow: "0 5px 25px rgba(0,0,0,0.08)",
   },
 
-  header: {
-    marginBottom: "30px",
+  backButton: {
+    border: "none",
+    backgroundColor: "transparent",
+    color: "#2563eb",
+    cursor: "pointer",
+    padding: "0",
+    marginBottom: "25px",
+    fontSize: "14px",
+  },
+
+  title: {
+    marginBottom: "5px",
   },
 
   subtitle: {
     color: "#6b7280",
-  },
-
-  content: {
-    display: "grid",
-    gridTemplateColumns:
-      "minmax(400px, 2fr) minmax(280px, 1fr)",
-    gap: "25px",
-  },
-
-  card: {
-    backgroundColor: "white",
-    padding: "30px",
-    borderRadius: "15px",
-    boxShadow:
-      "0 3px 12px rgba(0,0,0,0.06)",
+    marginBottom: "25px",
   },
 
   inputGroup: {
     display: "flex",
     flexDirection: "column",
-    marginTop: "20px",
+    marginBottom: "20px",
   },
 
   input: {
@@ -458,67 +342,55 @@ const styles = {
     border: "1px solid #d1d5db",
     borderRadius: "8px",
     fontSize: "15px",
-  },
-
-  amountBox: {
-    display: "flex",
-    alignItems: "center",
-    marginTop: "8px",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    paddingLeft: "12px",
-  },
-
-  amountInput: {
-    flex: 1,
-    padding: "12px",
-    border: "none",
-    outline: "none",
-    fontSize: "18px",
-  },
-
-  textarea: {
-    marginTop: "8px",
-    padding: "12px",
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    resize: "vertical",
-    fontSize: "15px",
-  },
-
-  transferButton: {
+    boxSizing: "border-box",
     width: "100%",
-    marginTop: "25px",
-    padding: "14px",
+  },
+
+  balanceBox: {
+    display: "flex",
+    justifyContent: "space-between",
+    backgroundColor: "#f3f4f6",
+    padding: "15px",
+    borderRadius: "8px",
+    marginBottom: "15px",
+  },
+
+  arrow: {
+    textAlign: "center",
+    fontSize: "25px",
+    marginBottom: "15px",
+  },
+
+  button: {
+    width: "100%",
+    padding: "13px",
+    border: "none",
+    borderRadius: "8px",
     backgroundColor: "#2563eb",
     color: "white",
-    border: "none",
-    borderRadius: "8px",
     fontSize: "16px",
     cursor: "pointer",
   },
 
-  message: {
-    marginTop: "20px",
+  success: {
+    backgroundColor: "#dcfce7",
+    color: "#166534",
     padding: "12px",
     borderRadius: "8px",
-    backgroundColor: "#ecfdf5",
-    color: "#047857",
+    marginBottom: "20px",
   },
 
-  infoCard: {
-    backgroundColor: "white",
-    padding: "25px",
-    borderRadius: "15px",
-    lineHeight: "1.6",
+  error: {
+    backgroundColor: "#fee2e2",
+    color: "#991b1b",
+    padding: "12px",
+    borderRadius: "8px",
+    marginBottom: "20px",
   },
 
-  limitCard: {
-    marginTop: "20px",
-    backgroundColor: "#1d4ed8",
-    color: "white",
-    padding: "25px",
-    borderRadius: "15px",
+  empty: {
+    textAlign: "center",
+    padding: "20px 0",
   },
 };
 

@@ -6,14 +6,15 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using BankApi.Dto.Transaction.Migrations;
 
 #nullable disable
 
-namespace BankApi.Migrations
+namespace BankApi.Dto.Transaction.Migrations
 {
     [DbContext(typeof(BankContext))]
-    [Migration("20260819130242_AddAccountsAndTransactions")]
-    partial class AddAccountsAndTransactions
+    [Migration("20260822061252_AddTransferAccountFields")]
+    partial class AddTransferAccountFields
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -50,7 +51,14 @@ namespace BankApi.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("AccountNumber")
+                        .IsUnique();
 
                     b.HasIndex("CustomerId");
 
@@ -97,9 +105,15 @@ namespace BankApi.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<int?>("DestinationAccountId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("ReferenceNumber")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int?>("SourceAccountId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Type")
                         .IsRequired()

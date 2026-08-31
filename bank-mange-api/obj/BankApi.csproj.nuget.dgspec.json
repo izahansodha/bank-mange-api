@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "E:\\bankapi\\bank-mange-api\\BankApi.csproj": {}
+    "D:\\code sof\\resume project react\\ai power dot net bank manage system\\bank-mange-api\\BankApi.csproj": {}
   },
   "projects": {
-    "E:\\bankapi\\bank-mange-api\\BankApi.csproj": {
+    "D:\\code sof\\resume project react\\ai power dot net bank manage system\\bank-mange-api\\BankApi.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "E:\\bankapi\\bank-mange-api\\BankApi.csproj",
+        "projectUniqueName": "D:\\code sof\\resume project react\\ai power dot net bank manage system\\bank-mange-api\\BankApi.csproj",
         "projectName": "BankApi",
-        "projectPath": "E:\\bankapi\\bank-mange-api\\BankApi.csproj",
-        "packagesPath": "C:\\Users\\dell\\.nuget\\packages\\",
-        "outputPath": "E:\\bankapi\\bank-mange-api\\obj\\",
+        "projectPath": "D:\\code sof\\resume project react\\ai power dot net bank manage system\\bank-mange-api\\BankApi.csproj",
+        "packagesPath": "C:\\Users\\izaha\\.nuget\\packages\\",
+        "outputPath": "D:\\code sof\\resume project react\\ai power dot net bank manage system\\bank-mange-api\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\dell\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\izaha\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -44,6 +44,10 @@
           "targetAlias": "net8.0",
           "dependencies": {
             "FluentValidation": {
+              "target": "Package",
+              "version": "[12.1.1, )"
+            },
+            "FluentValidation.DependencyInjectionExtensions": {
               "target": "Package",
               "version": "[12.1.1, )"
             },

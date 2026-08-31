@@ -1,128 +1,240 @@
+using BankApi.data;
+using BankApi.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using BankApi.Models;
-using BankApi.data;
+using System.Security.Claims;
 
-namespace BankApi.Controllers
+namespace BankApi.Controllers;
+
+[Authorize]
+[ApiController]
+[Route("api/[controller]")]
+public class CustomersController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class CustomersController : ControllerBase
+    private readonly BankContext _context;
+
+    public CustomersController(BankContext context)
     {
-        private readonly BankContext _context;
+        _context = context;
+    }
 
-        public CustomersController(BankContext context)
+
+    // =====================================================
+    // GET ALL CUSTOMERS
+    // ADMIN ONLY
+    // =====================================================
+
+    [HttpGet]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetCustomers()
+    {
+        var customers = await _context.Customers
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Ok(customers);
+    }
+
+
+    // =====================================================
+    // GET CUSTOMER BY ID
+    // ADMIN OR OWN CUSTOMER
+    // =====================================================
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetCustomer(int id)
+    {
+        var userIdString = User.FindFirstValue(
+            ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdString, out var userId))
+            return Unauthorized();
+
+
+        var customer = await _context.Customers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (customer == null)
+            return NotFound("Customer not found");
+
+
+        // Admin can view any customer.
+        if (User.IsInRole("Admin"))
         {
-            _context = context;
-        }
-
-        // GET: api/customers
-        [HttpGet]
-        public async Task<IActionResult> GetCustomers()
-        {
-            var customers = await _context.Customers.ToListAsync();
-
-            return Ok(customers);
-        }
-
-        // GET: api/customers/1
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetCustomer(int id)
-        {
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(c => c.Id == id);
-
-            if (customer == null)
-            {
-                return NotFound("Customer not found");
-            }
-
             return Ok(customer);
         }
 
-        // POST: api/customers
-        [HttpPost]
-        public async Task<IActionResult> CreateCustomer(Customer customer)
+
+        // Customer can only view their own profile.
+        if (customer.UserId != userId)
         {
-            _context.Customers.Add(customer);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Customer created successfully",
-                customer = customer
-            });
+            return Forbid();
         }
 
-        // PUT: api/customers/1
-        [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateCustomer(
-            int id,
-            Customer updatedCustomer)
+
+        return Ok(customer);
+    }
+
+
+    // =====================================================
+    // CREATE CUSTOMER
+    // ADMIN ONLY
+    // =====================================================
+
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreateCustomer(
+        Customer customer)
+    {
+        var userExists = await _context.Users
+            .AnyAsync(u => u.Id == customer.UserId);
+
+        if (!userExists)
         {
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(c => c.Id == id);
+            return BadRequest(
+                "The specified User does not exist.");
+        }
 
-            if (customer == null)
-            {
-                return NotFound("Customer not found");
-            }
 
-            customer.Name = updatedCustomer.Name;
+        var existingCustomer = await _context.Customers
+            .AnyAsync(c => c.UserId == customer.UserId);
+
+        if (existingCustomer)
+        {
+            return BadRequest(
+                "This User already has a Customer profile.");
+        }
+
+
+        customer.Id = 0;
+        customer.Balance = 0;
+
+        _context.Customers.Add(customer);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Customer created successfully",
+            customer
+        });
+    }
+
+
+    // =====================================================
+    // UPDATE CUSTOMER
+    // ADMIN OR OWN CUSTOMER
+    // =====================================================
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateCustomer(
+        int id,
+        Customer updatedCustomer)
+    {
+        var userIdString = User.FindFirstValue(
+            ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdString, out var userId))
+            return Unauthorized();
+
+
+        var customer = await _context.Customers
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (customer == null)
+        {
+            return NotFound("Customer not found");
+        }
+
+
+        // Customer can only update their own profile.
+        if (!User.IsInRole("Admin") &&
+            customer.UserId != userId)
+        {
+            return Forbid();
+        }
+
+
+        customer.Name = updatedCustomer.Name;
+
+        // Do NOT allow normal customers to change
+        // their banking balance.
+        if (User.IsInRole("Admin"))
+        {
             customer.Balance = updatedCustomer.Balance;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Customer updated successfully",
-                customer = customer
-            });
         }
 
-        // DELETE: api/customers/1
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteCustomer(int id)
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
         {
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(c => c.Id == id);
+            message = "Customer updated successfully",
+            customer
+        });
+    }
 
-            if (customer == null)
-            {
-                return NotFound("Customer not found");
-            }
 
-            _context.Customers.Remove(customer);
+    // =====================================================
+    // DELETE CUSTOMER
+    // ADMIN ONLY
+    // =====================================================
 
-            await _context.SaveChangesAsync();
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteCustomer(int id)
+    {
+        var customer = await _context.Customers
+            .FirstOrDefaultAsync(c => c.Id == id);
 
-            return Ok(new
-            {
-                message = "Customer deleted successfully",
-                customer = customer
-            });
-        }
-
-        // GET: api/customers/search?name=rahul
-        [HttpGet("search")]
-        public async Task<IActionResult> SearchCustomer(string name)
+        if (customer == null)
         {
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                return BadRequest("Name is required");
-            }
-
-            var result = await _context.Customers
-                .Where(c => c.Name.Contains(name))
-                .ToListAsync();
-
-            if (result.Count == 0)
-            {
-                return NotFound("Customer not found");
-            }
-
-            return Ok(result);
+            return NotFound("Customer not found");
         }
+
+
+        _context.Customers.Remove(customer);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "Customer deleted successfully",
+            customer
+        });
+    }
+
+
+    // =====================================================
+    // SEARCH CUSTOMERS
+    // ADMIN ONLY
+    // =====================================================
+
+    [HttpGet("search")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> SearchCustomer(
+        string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return BadRequest("Name is required");
+        }
+
+
+        var result = await _context.Customers
+            .AsNoTracking()
+            .Where(c => c.Name.Contains(name))
+            .ToListAsync();
+
+
+        if (result.Count == 0)
+        {
+            return NotFound("Customer not found");
+        }
+
+
+        return Ok(result);
     }
 }

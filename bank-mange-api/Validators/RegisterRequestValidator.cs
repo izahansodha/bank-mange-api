@@ -1,4 +1,7 @@
-using FluentVAlidation;
+using FluentValidation;
+using BankApi.Dto.Auth;
+
+namespace BankApi.Validators;
 
 public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 {

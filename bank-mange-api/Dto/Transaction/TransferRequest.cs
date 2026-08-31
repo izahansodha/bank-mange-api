@@ -1,5 +1,8 @@
-public class TransferRequest{
-    public Guid FromAccountId{ get;set;}
-    public Guid ToAccountId{ get;set;}
+namespace BankApi.Dto.Transaction;
+
+public class TransferRequest
+{
+    public int FromAccountId{ get;set;}
+    public int ToAccountId{ get;set;}
     public decimal Amount { get;set;}
 }
