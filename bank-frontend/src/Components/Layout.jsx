@@ -13,8 +13,9 @@ function Layout({ children }) {
         <main style={styles.main}>
           {children}
         </main>
-
+     
       </div>
+      
 
     </div>
   );

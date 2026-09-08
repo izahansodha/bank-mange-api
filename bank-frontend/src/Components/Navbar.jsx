@@ -66,6 +66,7 @@ function Navbar() {
       label: "Profile",
       icon: User,
     },
+    
   ];
 
   return (
@@ -126,6 +127,7 @@ function Navbar() {
           {/* Admin */}
 
           {user?.role === "Admin" && (
+            <>
             <Link
               to="/admin"
               style={{
@@ -139,35 +141,48 @@ function Navbar() {
               <ShieldCheck size={16} />
               Admin
             </Link>
+           <Link
+              to="/admin/users"
+              style={{
+                ...styles.link,
+                color: "#b45309",
+                ...(isActive("/admin/users")
+                  ? styles.adminActive
+                  : {}),
+              }}
+            >
+              <User size={16} />
+              Admin Users
+            </Link>
+
+            <Link
+              to="/admin/accounts"
+              style={{
+                ...styles.link,
+                color: "#b45309",
+                ...(isActive("/admin/accounts")
+                  ? styles.adminActive
+                  : {}),
+              }}
+            >
+              <CreditCard size={16} />
+              Admin Accounts
+            </Link>
+            <Link
+              to="/admin/transactions"
+              style={{
+                ...styles.link,
+                color: "#b45309",
+                ...(isActive("/admin/transactions")
+                  ? styles.adminActive
+                  : {}),
+              }}
+            >
+              <CreditCard size={16} />
+              Admin Transactions
+            </Link>
+            </>
           )}
-          {user?.role === "Admin" && (
-  <>
-    <Link to="/admin" style={styles.adminLink}>
-      Admin Dashboard
-    </Link>
-
-    <Link
-      to="/admin/users"
-      style={styles.adminLink}
-    >
-      Admin Users
-    </Link>
-
-    <Link
-      to="/admin/accounts"
-      style={styles.adminLink}
-    >
-      Admin Accounts
-    </Link>
-
-    <Link
-      to="/admin/transactions"
-      style={styles.adminLink}
-    >
-      Admin Transactions
-    </Link>
-  </>
-)}
 
         </div>
 
@@ -293,22 +308,18 @@ const styles = {
   navbar: {
     width: "100%",
     backgroundColor: "#ffffff",
-    borderBottom:
-      "1px solid #e5e7eb",
-    position: "sticky",
+    borderBottom: "1px solid #e5e7eb",
     top: 0,
     zIndex: 100,
+    position: "fixed",
   },
 
   container: {
-    maxWidth: "1400px",
-    margin: "0 auto",
-    minHeight: "70px",
-    padding: "0 30px",
-    display: "flex",
+   display: "flex",
     alignItems: "center",
-    gap: "25px",
-    boxSizing: "border-box",
+    gap: "20px",
+    padding: "0 20px",
+    height: "72px",
   },
 
   /* LOGO */

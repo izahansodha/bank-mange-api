@@ -2,34 +2,83 @@ using System.Text;
 using BankApi.data;
 using BankApi.Services;
 using FluentValidation;
+using Google.GenAI;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
-// Controllers
+// =====================================================
+// CONTROLLERS
+// =====================================================
+
 builder.Services.AddControllers();
 
-// FluentValidation
+// =====================================================
+// FLUENT VALIDATION
+// =====================================================
+
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-// Database
+// =====================================================
+// DATABASE
+// =====================================================
+
 builder.Services.AddDbContext<BankContext>(options =>
     options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection")
+        builder.Configuration.GetConnectionString(
+            "DefaultConnection"
+        )
     )
 );
 
-// Services
+// =====================================================
+// APPLICATION SERVICES
+// =====================================================
+
 builder.Services.AddScoped<IAuthServices, AuthService>();
+
 builder.Services.AddScoped<IAccountService, AccountService>();
+
 builder.Services.AddScoped<ITransactionService, TransactionService>();
+
 builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
+builder.Services.AddScoped<IAIService, AIService>();
+builder.Services.AddScoped<BankingAITools>();
+builder.Services.AddSingleton<AIPendingTransferService>();
+
+// =====================================================
+// GEMINI AI
+// =====================================================
+
+builder.Services.AddSingleton(sp =>
+{
+    var configuration =
+        sp.GetRequiredService<IConfiguration>();
+
+    var apiKey =
+        configuration["Gemini:ApiKey"];
+
+    if (string.IsNullOrWhiteSpace(apiKey))
+    {
+        throw new InvalidOperationException(
+            "Gemini API key is not configured."
+        );
+    }
+
+    return new Client(
+        apiKey: apiKey
+    );
+});
+
+// =====================================================
 // CORS
+// =====================================================
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReact", policy =>
@@ -41,55 +90,169 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Swagger
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// =====================================================
+// SWAGGER
+// =====================================================
 
-// JWT Authentication
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition(
+        "Bearer",
+        new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+
+            Type =
+                Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+
+            Scheme = "bearer",
+
+            BearerFormat = "JWT",
+
+            In =
+                Microsoft.OpenApi.Models.ParameterLocation.Header,
+
+            Description =
+                "Enter: Bearer {your JWT token}"
+        }
+    );
+
+    options.AddSecurityRequirement(
+        new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+        {
+            {
+                new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+                {
+                    Reference =
+                        new Microsoft.OpenApi.Models.OpenApiReference
+                        {
+                            Type =
+                                Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+
+                            Id = "Bearer"
+                        }
+                },
+
+                Array.Empty<string>()
+            }
+        }
+    );
+});
+
+// =====================================================
+// JWT AUTHENTICATION
+// =====================================================
+
 builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddAuthentication(
+        JwtBearerDefaults.AuthenticationScheme
+    )
     .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
+{
+    options.TokenValidationParameters =
+        new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
 
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer =
+                builder.Configuration["Jwt:Issuer"],
 
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(
-                    builder.Configuration["Jwt:Key"]!
+            ValidAudience =
+                builder.Configuration["Jwt:Audience"],
+
+            IssuerSigningKey =
+                new SymmetricSecurityKey(
+                    Encoding.UTF8.GetBytes(
+                        builder.Configuration["Jwt:Key"]!
+                    )
                 )
-            )
         };
-    });
 
-// Authorization
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            Console.WriteLine(
+                "================================"
+            );
+
+            Console.WriteLine(
+                "JWT AUTHENTICATION FAILED"
+            );
+
+            Console.WriteLine(
+                context.Exception.ToString()
+            );
+
+            Console.WriteLine(
+                "================================"
+            );
+
+            return Task.CompletedTask;
+        },
+
+        OnChallenge = context =>
+        {
+            Console.WriteLine(
+                $"JWT CHALLENGE: {context.Error}"
+            );
+
+            Console.WriteLine(
+                $"JWT DESCRIPTION: {context.ErrorDescription}"
+            );
+
+            return Task.CompletedTask;
+        }
+    };
+});
+// =====================================================
+// AUTHORIZATION
+// =====================================================
+
 builder.Services.AddAuthorization();
+
+// =====================================================
+// BUILD APP
+// =====================================================
 
 var app = builder.Build();
 
-// Swagger
+// =====================================================
+// DEVELOPMENT
+// =====================================================
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
+
     app.UseSwaggerUI();
 }
 
+// =====================================================
+// MIDDLEWARE
+// =====================================================
+
 app.UseHttpsRedirection();
 
-// CORS MUST be before authorization
 app.UseCors("AllowReact");
 
-// Authentication MUST be before authorization
 app.UseAuthentication();
 
 app.UseAuthorization();
 
+// =====================================================
+// CONTROLLERS
+// =====================================================
+
 app.MapControllers();
+
+// =====================================================
+// RUN
+// =====================================================
 
 app.Run();

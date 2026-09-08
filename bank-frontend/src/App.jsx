@@ -10,12 +10,13 @@ import Profile from "./pages/Profile";
 import AdminRoute from "./Components/AdminRoute";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminAccount from "./pages/admin/AdminAccount";
-import AiAssistant from "./pages/AiAssistant";
 import Deposit from "./pages/Deposit";
 import Withdraw from "./pages/Withdraw";
 import AdminUsers from "./pages/admin/adminuser";
 import ProtectedRoute from "./Components/ProtectedRoute";
+import AccountDetails from "./pages/AccountDetails";
 import Navbar from "./Components/Navbar";
+import AIAssistant from "./Components/AiAssistant";
 import AdminTransactions from "./pages/admin/AdminTransactions";
 
 function App() {
@@ -32,8 +33,8 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <Navbar />
               <Dashboard />
+              <AIAssistant />
             </ProtectedRoute>
           }
         />
@@ -44,6 +45,10 @@ function App() {
       <Deposit />
     </ProtectedRoute>
   }
+/>
+<Route
+  path="/account/:id"
+  element={<AccountDetails />}
 />
 <Route
   path="/withdraw"
@@ -58,7 +63,7 @@ function App() {
           path="/account"
           element={
             <ProtectedRoute>
-              <Navbar />
+              
               <Account />
             </ProtectedRoute>
           }
@@ -68,7 +73,7 @@ function App() {
           path="/transactions"
           element={
             <ProtectedRoute>
-              <Navbar />
+             
               <Transactions />
             </ProtectedRoute>
           }
@@ -78,7 +83,7 @@ function App() {
           path="/transfer"
           element={
             <ProtectedRoute>
-              <Navbar />
+             
               <Transfer />
             </ProtectedRoute>
           }
@@ -87,6 +92,7 @@ function App() {
   path="/admin/users"
   element={
     <ProtectedRoute>
+     
       <AdminUsers />
     </ProtectedRoute>
   }
@@ -96,7 +102,7 @@ function App() {
           path="/profile"
           element={
             <ProtectedRoute>
-              <Navbar />
+              
               <Profile />
             </ProtectedRoute>
           }
@@ -110,22 +116,12 @@ function App() {
   }
 />
 
-        <Route
-          path="/ai-assistant"
-          element={
-            <ProtectedRoute>
-              <Navbar />
-              <AiAssistant />
-            </ProtectedRoute>
-          }
-        />
-
         {/* Admin pages */}
         <Route
           path="/admin"
           element={
             <ProtectedRoute requiredRole="Admin">
-              <Navbar />
+              
               <AdminDashboard />
             </ProtectedRoute>
           }
@@ -135,7 +131,7 @@ function App() {
           path="/admin/accounts"
           element={
             <ProtectedRoute requiredRole="Admin">
-              <Navbar />
+              
               <AdminAccount />
             </ProtectedRoute>
           }

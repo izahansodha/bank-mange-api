@@ -1,13 +1,17 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
+import "./css/Login.css";
 
 function Login() {
+  const navigate = useNavigate();
+  const { login } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -16,23 +20,21 @@ function Login() {
     setLoading(true);
 
     try {
-      const data = await login(email, password);
-
-      console.log("Login successful:", data);
+      await login(email, password);
 
       setMessage("Login successful!");
 
-      // Temporary:
-      // We'll add proper navigation after routing is configured.
-      window.location.href = "/dashboard";
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 500);
     } catch (error) {
       console.error(error);
 
       if (error.response) {
         setMessage(
           error.response.data?.message ||
-          error.response.data ||
-          "Invalid email or password"
+            error.response.data ||
+            "Invalid email or password."
         );
       } else {
         setMessage(
@@ -45,50 +47,78 @@ function Login() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>
-          Bank Management
-        </h1>
+    <main className="login-page">
+      <section className="login-card">
 
-        <p style={styles.subtitle}>
-          Login to your account
-        </p>
+        {/* Logo / Brand */}
 
-        <form onSubmit={handleLogin}>
+        <div className="login-brand">
+          <div className="login-logo">
+            B
+          </div>
 
-          <div style={styles.inputGroup}>
-            <label>Email</label>
+          <h1>BankApp</h1>
+
+          <p>Internet Banking</p>
+        </div>
+
+        {/* Heading */}
+
+        <div className="login-heading">
+          <h2>Welcome back</h2>
+
+          <p>
+            Login to access your account
+          </p>
+        </div>
+
+        {/* Form */}
+
+        <form
+          className="login-form"
+          onSubmit={handleLogin}
+        >
+
+          <div className="form-group">
+            <label htmlFor="email">
+              Email
+            </label>
 
             <input
+              id="email"
               type="email"
               placeholder="Enter your email"
               value={email}
               onChange={(e) =>
                 setEmail(e.target.value)
               }
+              autoComplete="email"
               required
             />
           </div>
 
-          <div style={styles.inputGroup}>
-            <label>Password</label>
+          <div className="form-group">
+            <label htmlFor="password">
+              Password
+            </label>
 
             <input
+              id="password"
               type="password"
               placeholder="Enter your password"
               value={password}
               onChange={(e) =>
                 setPassword(e.target.value)
               }
+              autoComplete="current-password"
               required
             />
           </div>
 
           <button
             type="submit"
+            className="login-button"
             disabled={loading}
-            style={styles.button}
           >
             {loading
               ? "Logging in..."
@@ -97,65 +127,39 @@ function Login() {
 
         </form>
 
+        {/* Message */}
+
         {message && (
-          <p style={styles.message}>
+          <div
+            className={
+              message === "Login successful!"
+                ? "login-message success"
+                : "login-message error"
+            }
+          >
             {message}
-          </p>
+          </div>
         )}
-      </div>
-    </div>
+
+        {/* Register */}
+
+        <div className="register-link">
+          <span>
+            Don't have an account?
+          </span>
+
+          <button
+            type="button"
+            onClick={() => navigate("/register")}
+          >
+            Create account
+          </button>
+        </div>
+
+      </section>
+    </main>
   );
 }
 
-const styles = {
-  container: {
-    minHeight: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f4f6f8",
-  },
-
-  card: {
-    width: "380px",
-    padding: "35px",
-    backgroundColor: "white",
-    borderRadius: "12px",
-    boxShadow: "0 5px 25px rgba(0,0,0,0.1)",
-  },
-
-  title: {
-    textAlign: "center",
-    marginBottom: "5px",
-  },
-
-  subtitle: {
-    textAlign: "center",
-    color: "#666",
-    marginBottom: "25px",
-  },
-
-  inputGroup: {
-    display: "flex",
-    flexDirection: "column",
-    marginBottom: "18px",
-  },
-
-  button: {
-    width: "100%",
-    padding: "12px",
-    border: "none",
-    borderRadius: "6px",
-    backgroundColor: "#2563eb",
-    color: "white",
-    fontSize: "16px",
-    cursor: "pointer",
-  },
-
-  message: {
-    marginTop: "20px",
-    textAlign: "center",
-  },
-};
-
 export default Login;
+

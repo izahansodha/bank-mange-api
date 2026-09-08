@@ -13,7 +13,7 @@ import { useAuth } from "../Context/AuthContext";
 function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
 
   const menuItems = [
     {
@@ -101,6 +101,71 @@ function Sidebar() {
         })}
 
       </nav>
+      {/* Admin Navigation */}
+
+{user?.role === "Admin" && (
+  <>
+    <div style={styles.menuTitle}>
+      ADMIN
+    </div>
+
+    <nav style={styles.nav}>
+
+      <button
+        onClick={() => navigate("/admin")}
+        style={{
+          ...styles.navItem,
+          ...(location.pathname === "/admin"
+            ? styles.adminActiveNav
+            : {}),
+        }}
+      >
+        <LayoutDashboard size={19} />
+        <span>Admin Dashboard</span>
+      </button>
+
+      <button
+        onClick={() => navigate("/admin/users")}
+        style={{
+          ...styles.navItem,
+          ...(location.pathname === "/admin/users"
+            ? styles.adminActiveNav
+            : {}),
+        }}
+      >
+        <User size={19} />
+        <span>Admin Users</span>
+      </button>
+
+      <button
+        onClick={() => navigate("/admin/accounts")}
+        style={{
+          ...styles.navItem,
+          ...(location.pathname === "/admin/accounts"
+            ? styles.adminActiveNav
+            : {}),
+        }}
+      >
+        <CreditCard size={19} />
+        <span>Admin Accounts</span>
+      </button>
+
+      <button
+        onClick={() => navigate("/admin/transactions")}
+        style={{
+          ...styles.navItem,
+          ...(location.pathname === "/admin/transactions"
+            ? styles.adminActiveNav
+            : {}),
+        }}
+      >
+        <ArrowLeftRight size={19} />
+        <span>Admin Transactions</span>
+      </button>
+
+    </nav>
+  </>
+)}
 
       {/* Bottom */}
 
@@ -198,6 +263,11 @@ const styles = {
   },
 
   activeNav: {
+    backgroundColor: "#eff6ff",
+    color: "#2563eb",
+    fontWeight: "600",
+  },
+  adminActiveNav: {
     backgroundColor: "#eff6ff",
     color: "#2563eb",
     fontWeight: "600",

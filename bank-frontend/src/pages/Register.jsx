@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
+import "./css/Register.css";
 
 function Register() {
+  const navigate = useNavigate();
   const { register } = useAuth();
 
   const [form, setForm] = useState({
@@ -49,8 +52,8 @@ function Register() {
       if (error.response) {
         setMessage(
           error.response.data?.message ||
-          error.response.data ||
-          "Registration failed."
+            error.response.data ||
+            "Registration failed."
         );
       } else {
         setMessage(
@@ -63,130 +66,133 @@ function Register() {
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
+    <main className="register-page">
+      <section className="register-card">
 
-        <h1 style={styles.title}>
-          Create Account
-        </h1>
+        {/* Brand */}
 
-        <p style={styles.subtitle}>
-          Register for Bank Management
-        </p>
+        <div className="register-brand">
+          <div className="register-logo">
+            B
+          </div>
 
-        <form onSubmit={handleRegister}>
+          <h1>BankApp</h1>
 
-          <div style={styles.inputGroup}>
-            <label>Full Name</label>
+          <p>Internet Banking</p>
+        </div>
+
+        {/* Heading */}
+
+        <div className="register-heading">
+          <h2>Create your account</h2>
+
+          <p>
+            Register to access your banking account
+          </p>
+        </div>
+
+        {/* Form */}
+
+        <form
+          className="register-form"
+          onSubmit={handleRegister}
+        >
+
+          <div className="form-group">
+            <label htmlFor="fullName">
+              Full Name
+            </label>
 
             <input
+              id="fullName"
               type="text"
               name="fullName"
-              placeholder="Enter full name"
+              placeholder="Enter your full name"
               value={form.fullName}
               onChange={handleChange}
+              autoComplete="name"
               required
             />
           </div>
 
-          <div style={styles.inputGroup}>
-            <label>Email</label>
+          <div className="form-group">
+            <label htmlFor="register-email">
+              Email
+            </label>
 
             <input
+              id="register-email"
               type="email"
               name="email"
-              placeholder="Enter email"
+              placeholder="Enter your email"
               value={form.email}
               onChange={handleChange}
+              autoComplete="email"
               required
             />
           </div>
 
-          <div style={styles.inputGroup}>
-            <label>Password</label>
+          <div className="form-group">
+            <label htmlFor="register-password">
+              Password
+            </label>
 
             <input
+              id="register-password"
               type="password"
               name="password"
-              placeholder="Create password"
+              placeholder="Create a password"
               value={form.password}
               onChange={handleChange}
+              autoComplete="new-password"
               required
             />
           </div>
 
           <button
             type="submit"
+            className="register-button"
             disabled={loading}
-            style={styles.button}
           >
             {loading
               ? "Creating Account..."
-              : "Register"}
+              : "Create Account"}
           </button>
 
         </form>
 
+        {/* Message */}
+
         {message && (
-          <p style={styles.message}>
+          <div
+            className={
+              message.startsWith("Registration successful")
+                ? "register-message success"
+                : "register-message error"
+            }
+          >
             {message}
-          </p>
+          </div>
         )}
 
-      </div>
-    </div>
+        {/* Login */}
+
+        <div className="login-link">
+          <span>
+            Already have an account?
+          </span>
+
+          <button
+            type="button"
+            onClick={() => navigate("/login")}
+          >
+            Login
+          </button>
+        </div>
+
+      </section>
+    </main>
   );
 }
-
-const styles = {
-  container: {
-    minHeight: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f4f6f8",
-  },
-
-  card: {
-    width: "380px",
-    padding: "35px",
-    backgroundColor: "white",
-    borderRadius: "12px",
-    boxShadow: "0 5px 25px rgba(0,0,0,0.1)",
-  },
-
-  title: {
-    textAlign: "center",
-    marginBottom: "5px",
-  },
-
-  subtitle: {
-    textAlign: "center",
-    color: "#666",
-    marginBottom: "25px",
-  },
-
-  inputGroup: {
-    display: "flex",
-    flexDirection: "column",
-    marginBottom: "18px",
-  },
-
-  button: {
-    width: "100%",
-    padding: "12px",
-    border: "none",
-    borderRadius: "6px",
-    backgroundColor: "#2563eb",
-    color: "white",
-    fontSize: "16px",
-    cursor: "pointer",
-  },
-
-  message: {
-    textAlign: "center",
-    marginTop: "20px",
-  },
-};
 
 export default Register;

@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 
 import Layout from "../Components/Layout";
-
 import {
   getMyAccounts,
   createAccount,

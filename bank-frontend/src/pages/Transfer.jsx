@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getMyAccounts } from "../api/accountApi";
 import { transfer } from "../api/transactionApi";
 import { useNavigate } from "react-router-dom";
+import Layout from "../Components/Layout";
 
 function Transfer() {
   const navigate = useNavigate();
@@ -139,6 +140,7 @@ function Transfer() {
   };
 
   return (
+    <Layout>
     <div style={styles.page}>
       <div style={styles.card}>
 
@@ -283,6 +285,7 @@ function Transfer() {
 
       </div>
     </div>
+    </Layout>
   );
 }
 

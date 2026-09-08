@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
+import Layout from "../Components/Layout";
 
 function Profile() {
   const navigate = useNavigate();
@@ -28,73 +29,11 @@ function Profile() {
   }
 
   return (
+    <Layout>
     <div style={styles.page}>
 
       {/* ================= SIDEBAR ================= */}
 
-      <aside style={styles.sidebar}>
-
-        <h2 style={styles.logo}>
-          🏦 BankApp
-        </h2>
-
-        <nav>
-
-          <button
-            style={styles.navItem}
-            onClick={() =>
-              navigate("/dashboard")
-            }
-          >
-            📊 Dashboard
-          </button>
-
-          <button
-            style={styles.navItem}
-            onClick={() =>
-              navigate("/account")
-            }
-          >
-            💳 Accounts
-          </button>
-
-          <button
-            style={styles.navItem}
-            onClick={() =>
-              navigate("/transactions")
-            }
-          >
-            💸 Transactions
-          </button>
-
-          <button
-            style={styles.navItem}
-            onClick={() =>
-              navigate("/transfer")
-            }
-          >
-            🔄 Transfer
-          </button>
-
-          <button
-            style={{
-              ...styles.navItem,
-              ...styles.activeNav,
-            }}
-          >
-            👤 Profile
-          </button>
-
-        </nav>
-
-        <button
-          style={styles.logout}
-          onClick={handleLogout}
-        >
-          Logout
-        </button>
-
-      </aside>
 
       {/* ================= MAIN ================= */}
 
@@ -215,6 +154,7 @@ function Profile() {
       </main>
 
     </div>
+    </Layout>
   );
 }
 
